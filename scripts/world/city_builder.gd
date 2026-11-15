@@ -42,6 +42,8 @@ var _root: Node3D
 var _body: StaticBody3D
 var _lights: Node3D
 var _signs: Node3D
+## Separate nodes for everything that can be shot apart (glass, props, cars).
+var _breakables: Node3D
 var _ground: GeoBatch
 var _props: GeoBatch
 
@@ -63,6 +65,9 @@ func build() -> void:
 	_signs = Node3D.new()
 	_signs.name = "Signs"
 	_root.add_child(_signs)
+	_breakables = Node3D.new()
+	_breakables.name = "Breakables"
+	_root.add_child(_breakables)
 	_ground = GeoBatch.new()
 	_props = GeoBatch.new()
 
@@ -405,7 +410,7 @@ func _storefront(geo: GeoBatch, xf: Transform3D, width: float) -> void:
 			if _rng.randf() < 0.6:
 				var item := Vector3(_rng.randf_range(0.15, 0.4), _rng.randf_range(0.15, 0.5), 0.06)
 				geo.add_box(item, _at(xf, 0.9 + j * 0.7, 0.98 + i * 0.75 + item.y * 0.5, 0.07), silhouette)
-	geo.add_box(Vector3(window_width, 2.8, 0.03), _at(xf, 0.6 + window_width * 0.5, 1.9, 0.18), MatLib.glass(Color(0.4, 0.7, 1.0, 0.08)))
+	BuildKit.glass_pane(_breakables, _at(xf, 0.6 + window_width * 0.5, 1.9, 0.18), Vector3(window_width, 2.8, 0.03), Color(0.4, 0.7, 1.0, 0.08))
 	geo.add_box(Vector3(window_width + 0.3, 0.5, 0.3), _at(xf, 0.6 + window_width * 0.5, 0.25, 0.15), frame)
 	geo.add_box(Vector3(window_width + 0.3, 0.12, 0.3), _at(xf, 0.6 + window_width * 0.5, 3.36, 0.15), frame)
 	geo.add_box(Vector3(0.12, 3.4, 0.3), _at(xf, 0.55, 1.7, 0.15), frame)
@@ -414,7 +419,7 @@ func _storefront(geo: GeoBatch, xf: Transform3D, width: float) -> void:
 	# Door with a lit panel behind dark glass.
 	var door_x := width - 1.6
 	geo.add_box(Vector3(1.2, 2.45, 0.02), _at(xf, door_x, 1.38, 0.02), glow)
-	geo.add_box(Vector3(1.2, 2.45, 0.04), _at(xf, door_x, 1.38, 0.1), MatLib.glass(Color(0.15, 0.2, 0.3, 0.55)))
+	BuildKit.glass_pane(_breakables, _at(xf, door_x, 1.38, 0.1), Vector3(1.2, 2.45, 0.04), Color(0.15, 0.2, 0.3, 0.55))
 	geo.add_box(Vector3(1.5, 0.15, 0.25), _at(xf, door_x, 2.68, 0.12), frame)
 	geo.add_box(Vector3(0.6, 0.06, 0.05), _at(xf, door_x, 2.85, 0.2), MatLib.neon(Palette.WARM_WHITE, 2.5))
 

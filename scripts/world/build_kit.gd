@@ -65,6 +65,16 @@ static func flat_text(parent: Node, text: String, xform: Transform3D, color: Col
 	return label
 
 
+## Breakable glass pane centred on `xform` (see GlassPane).
+static func glass_pane(parent: Node, xform: Transform3D, size: Vector3, tint := Color(0.4, 0.7, 1.0, 0.1)) -> GlassPane:
+	var pane := GlassPane.new()
+	pane.size = size
+	pane.tint = tint
+	pane.transform = xform
+	parent.add_child(pane)
+	return pane
+
+
 static func static_body(parent: Node, node_name := "Collision") -> StaticBody3D:
 	var body := StaticBody3D.new()
 	body.name = node_name

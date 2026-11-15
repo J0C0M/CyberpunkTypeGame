@@ -13,6 +13,8 @@
 [ext_resource type="PackedScene" path="res://scenes/props/ammo_crate.tscn" id="13_crate"]
 [ext_resource type="AudioStream" path="res://assets/audio/city_ambience.wav" id="14_ambience"]
 [ext_resource type="AudioStream" path="res://assets/audio/dragon_hum.wav" id="15_hum"]
+[ext_resource type="Script" path="res://scripts/combat/debris_pool.gd" id="16_debris"]
+[ext_resource type="Script" path="res://scripts/core/sfx_pool.gd" id="17_sfx"]
 
 [node name="World" type="Node3D"]
 
@@ -147,6 +149,12 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 19, 0.15, -10.25)
 
 [node name="ImpactEffects" type="Node3D" parent="."]
 script = ExtResource("12_impacts")
+
+[node name="DebrisPool" type="Node3D" parent="."]
+script = ExtResource("16_debris")
+
+[node name="SfxPool" type="Node3D" parent="."]
+script = ExtResource("17_sfx")
 
 [node name="CityAmbience" type="AudioStreamPlayer" parent="."]
 stream = ExtResource("14_ambience")

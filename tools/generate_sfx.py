@@ -181,6 +181,23 @@ def dragon_hum(rng):
     return normalize(crossfade_loop(mix(out, whine, air), 1.0), 0.6)
 
 
+def glass_shatter(rng):
+    length = 1.1
+    n = seconds(length)
+    crack = [s * e for s, e in zip(highpass(noise(n, rng), 2500), envelope(n, 0.0005, 0.018))]
+    body = [s * e * 0.6 for s, e in zip(lowpass(noise(n, rng), 5000), envelope(n, 0.001, 0.06))]
+    tinkles = [0.0] * n
+    for _ in range(46):
+        start = seconds(min(length - 0.1, rng.expovariate(1.0 / 0.16)))
+        freq = rng.uniform(2400, 7800)
+        decay = rng.uniform(0.012, 0.05)
+        amp = rng.uniform(0.15, 0.5) * math.exp(-start / SAMPLE_RATE * 2.5)
+        for i in range(seconds(decay * 5)):
+            if start + i < n:
+                tinkles[start + i] += amp * math.sin(2 * math.pi * freq * i / SAMPLE_RATE) * math.exp(-(i / SAMPLE_RATE) / decay)
+    return normalize(lowpass(mix(crack, body, tinkles), 7000), 0.8)
+
+
 def main():
     rng = random.Random(2077)
     write("rifle_shot.wav", rifle_shot(rng))
@@ -190,6 +207,8 @@ def main():
     write("city_ambience.wav", city_ambience(rng))
     write("neon_buzz.wav", neon_buzz(rng))
     write("dragon_hum.wav", dragon_hum(rng))
+    write("glass_shatter_1.wav", glass_shatter(rng))
+    write("glass_shatter_2.wav", glass_shatter(rng))
 
 
 if __name__ == "__main__":
