@@ -1,0 +1,41 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/weapons/rifle.gd" id="1_rifle"]
+[ext_resource type="Script" path="res://scripts/weapons/rifle_model.gd" id="2_model"]
+[ext_resource type="AudioStream" path="res://assets/audio/rifle_shot.wav" id="3_shot"]
+[ext_resource type="AudioStream" path="res://assets/audio/rifle_reload.wav" id="4_reload"]
+[ext_resource type="AudioStream" path="res://assets/audio/rifle_dry_fire.wav" id="5_dry"]
+
+[node name="Rifle" type="Node3D"]
+script = ExtResource("1_rifle")
+
+[node name="Model" type="Node3D" parent="."]
+script = ExtResource("2_model")
+
+[node name="Muzzle" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.012, -0.72)
+
+[node name="FlashLight" type="OmniLight3D" parent="Muzzle"]
+light_color = Color(1, 0.7, 0.35, 1)
+light_energy = 4.0
+omni_range = 7.0
+
+[node name="FillLight" type="OmniLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.12, 0.3, 0.2)
+light_color = Color(0.75, 0.8, 1, 1)
+light_energy = 0.6
+light_cull_mask = 2
+omni_range = 1.6
+
+[node name="ShotSound" type="AudioStreamPlayer" parent="."]
+stream = ExtResource("3_shot")
+volume_db = -6.0
+max_polyphony = 4
+
+[node name="ReloadSound" type="AudioStreamPlayer" parent="."]
+stream = ExtResource("4_reload")
+volume_db = -4.0
+
+[node name="DryFireSound" type="AudioStreamPlayer" parent="."]
+stream = ExtResource("5_dry")
+volume_db = -6.0
