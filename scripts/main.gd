@@ -7,6 +7,7 @@ const ScreenshotRunner := preload("res://scripts/debug/screenshot_runner.gd")
 func _ready() -> void:
 	var runner := ScreenshotRunner.from_cmdline()
 	if runner:
+		get_tree().set_meta("screenshot_mode", true)
 		add_child(runner)
 	else:
 		set_mouse_captured(true)

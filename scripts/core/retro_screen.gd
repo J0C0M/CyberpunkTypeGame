@@ -13,6 +13,9 @@ extends SubViewportContainer
 			_apply()
 
 
+var _wobble_enabled := true
+
+
 func _ready() -> void:
 	get_viewport().size_changed.connect(_apply)
 	_apply()
@@ -21,9 +24,11 @@ func _ready() -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("toggle_retro_filter"):
 		retro_enabled = not retro_enabled
+		get_tree().call_group("hud", "show_message", "RETRO FILTER " + ("ON" if retro_enabled else "OFF"))
 	elif event.is_action_pressed("toggle_vertex_wobble"):
-		var wobble: Variant = RenderingServer.global_shader_parameter_get("ps1_wobble")
-		RenderingServer.global_shader_parameter_set("ps1_wobble", 0.0 if wobble and wobble > 0.0 else 1.0)
+		_wobble_enabled = not _wobble_enabled
+		RenderingServer.global_shader_parameter_set("ps1_wobble", 1.0 if _wobble_enabled else 0.0)
+		get_tree().call_group("hud", "show_message", "VERTEX WOBBLE " + ("ON" if _wobble_enabled else "OFF"))
 
 
 func _apply() -> void:

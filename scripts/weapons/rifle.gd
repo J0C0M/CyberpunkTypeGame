@@ -102,6 +102,16 @@ func start_reload() -> void:
 	reload_started.emit(reload_time)
 
 
+## Current spread in degrees (base + bloom); the HUD crosshair opens up with it.
+func get_spread() -> float:
+	return base_spread + _bloom
+
+
+## 0..1 while reloading.
+func get_reload_progress() -> float:
+	return clampf(_reload_elapsed / reload_time, 0.0, 1.0) if is_reloading else 0.0
+
+
 ## Tops the reserve up to the maximum (used by ammo crates).
 func refill() -> void:
 	reserve_ammo = max_reserve_ammo
