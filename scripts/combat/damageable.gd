@@ -7,16 +7,16 @@ extends Node
 signal damaged(hit: HitInfo)
 signal died(hit: HitInfo)
 
-@export var max_health := 100.0
+## Setting this also fills health up, so it is ready before the node even enters the tree.
+@export var max_health := 100.0:
+	set(value):
+		max_health = value
+		health = value
 ## Still reports hits (so the owner can react) but never loses health.
 @export var invulnerable := false
 
-var health := 0.0
+var health := 100.0
 var is_dead := false
-
-
-func _ready() -> void:
-	health = max_health
 
 
 func apply_damage(hit: HitInfo) -> void:
