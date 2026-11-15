@@ -14,6 +14,8 @@ signal reload_finished
 @export var max_reserve_ammo := 300
 @export var reload_time := 2.0
 @export var max_range := 400.0
+## Damage per bullet before hit-zone multipliers (headshots, engine blocks...).
+@export var damage := 34.0
 ## Spread in degrees: the base value plus bloom that builds up while holding the trigger.
 @export var base_spread := 0.3
 @export var spread_per_shot := 0.22
@@ -21,8 +23,10 @@ signal reload_finished
 @export var recoil_pitch := 1.1
 @export var recoil_yaw := 0.5
 
-## World, NPCs and props (physics layers 1, 3 and 4).
-const HIT_MASK := 1 | 4 | 8
+## World, NPCs, props and hit zones (physics layers 1, 3, 4 and 5).
+const HIT_MASK := 1 | 4 | 8 | 16
+## How far the bang of a shot alarms people, in metres.
+const SHOT_ALARM_RADIUS := 35.0
 
 @onready var model: RifleModel = $Model
 @onready var muzzle: Marker3D = $Muzzle
@@ -135,15 +139,20 @@ func _fire() -> void:
 	var direction := _spread_direction(camera.global_basis, deg_to_rad(base_spread + _bloom))
 	var end := origin + direction * max_range
 	var query := PhysicsRayQueryParameters3D.create(origin, end, HIT_MASK)
+	query.collide_with_areas = true
 	if _player:
 		query.exclude = [_player.get_rid()]
 	var hit := get_world_3d().direct_space_state.intersect_ray(query)
 	if not hit.is_empty():
 		end = hit["position"]
+		var collider: Object = hit["collider"]
+		var target := Damageable.deliver(collider, HitInfo.create(damage, end, hit["normal"], direction, _player, HitInfo.Kind.BULLET, 3.0))
 		var effects := get_tree().get_first_node_in_group("impact_effects") as ImpactEffects
-		if effects:
-			# Bullet holes only on the static world; moving NPCs just throw sparks.
-			effects.spawn_impact(end, hit["normal"], hit["collider"] is StaticBody3D)
+		if effects and target == null:
+			# Bullet holes only on the static world; anything with health shows its own reaction.
+			effects.spawn_impact(end, hit["normal"], collider is StaticBody3D)
+		EventBus.emit_danger(end, 9.0, EventBus.SEVERITY_IMPACT, _player)
+	EventBus.emit_danger(origin, SHOT_ALARM_RADIUS, EventBus.SEVERITY_SHOT, _player)
 
 	_show_tracer(muzzle.global_position, end)
 	_flash_time = 0.045
