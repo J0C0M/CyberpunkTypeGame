@@ -4,6 +4,7 @@
 [ext_resource type="PackedScene" path="res://scenes/player/player.tscn" id="2_player"]
 [ext_resource type="PackedScene" path="res://scenes/world/sushi_cafe.tscn" id="5_cafe"]
 [ext_resource type="PackedScene" path="res://scenes/world/city.tscn" id="6_city"]
+[ext_resource type="PackedScene" path="res://scenes/world/skyline.tscn" id="7_skyline"]
 
 [node name="World" type="Node3D"]
 
@@ -16,6 +17,8 @@ light_color = Color(0.5, 0.58, 1, 1)
 light_energy = 0.12
 
 [node name="City" parent="." instance=ExtResource("6_city")]
+
+[node name="Skyline" parent="." instance=ExtResource("7_skyline")]
 
 [node name="SushiCafe" parent="." instance=ExtResource("5_cafe")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 24, 0, -9)

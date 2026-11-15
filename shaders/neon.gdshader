@@ -14,20 +14,27 @@ uniform float blink_rate = 0.0;
 // Slow brightness breathing amount.
 uniform float pulse = 0.0;
 uniform float seed = 0.0;
+// For MultiMesh use: INSTANCE_CUSTOM.rgb replaces `color` and .a replaces `seed`.
+uniform bool use_instance_custom = false;
+
+varying vec4 instance_data;
 
 void vertex() {
+	instance_data = INSTANCE_CUSTOM;
 	POSITION = ps1_snap(PROJECTION_MATRIX * MODELVIEW_MATRIX * vec4(VERTEX, 1.0));
 }
 
 void fragment() {
+	vec3 base_color = use_instance_custom ? instance_data.rgb : color.rgb;
+	float tick_seed = use_instance_custom ? instance_data.a : seed;
 	float f = 1.0;
 	if (flicker > 0.0) {
-		float tick = floor(TIME * flicker_speed + seed * 31.0);
-		f = ps1_hash(vec2(tick, seed)) < flicker * 0.3 ? 0.12 : 1.0;
+		float tick = floor(TIME * flicker_speed + tick_seed * 31.0);
+		f = ps1_hash(vec2(tick, tick_seed)) < flicker * 0.3 ? 0.12 : 1.0;
 	}
 	if (blink_rate > 0.0) {
-		f *= step(0.45, fract(TIME * blink_rate + seed));
+		f *= step(0.45, fract(TIME * blink_rate + tick_seed));
 	}
-	f *= 1.0 - pulse * (0.5 + 0.5 * sin(TIME * 2.0 + seed * 6.28));
-	ALBEDO = color.rgb * energy * f;
+	f *= 1.0 - pulse * (0.5 + 0.5 * sin(TIME * 2.0 + tick_seed * 6.28));
+	ALBEDO = base_color * energy * f;
 }
