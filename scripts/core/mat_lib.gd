@@ -1,3 +1,4 @@
+@tool
 class_name MatLib
 extends RefCounted
 ## Material factory. Everything in the world uses a handful of shared shaders so the retro

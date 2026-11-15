@@ -4,6 +4,7 @@
 [ext_resource type="PackedScene" path="res://scenes/player/player.tscn" id="2_player"]
 [ext_resource type="Shader" path="res://shaders/ps1_surface.gdshader" id="3_surface"]
 [ext_resource type="Shader" path="res://shaders/neon.gdshader" id="4_neon"]
+[ext_resource type="PackedScene" path="res://scenes/world/sushi_cafe.tscn" id="5_cafe"]
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_floor"]
 shader = ExtResource("3_surface")
@@ -72,4 +73,8 @@ light_color = Color(0.1, 0.88, 1, 1)
 light_energy = 3.0
 omni_range = 9.0
 
+[node name="SushiCafe" parent="." instance=ExtResource("5_cafe")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 24, 0, -9)
+
 [node name="Player" parent="." instance=ExtResource("2_player")]
+transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, 24, 0.15, -13)

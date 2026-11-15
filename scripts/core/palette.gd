@@ -1,3 +1,4 @@
+@tool
 class_name Palette
 extends RefCounted
 ## Shared colours for the city: saturated neons plus dark base tones.
