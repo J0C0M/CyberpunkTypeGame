@@ -19,6 +19,8 @@ extends Node3D
 @export_range(0.0, 1.0) var start_offset := 0.0
 ## Adds a coloured light to the head; worth it for dragons that fly low between the buildings.
 @export var head_light := false
+## Looping engine sound played from the head (optional).
+@export var hum: AudioStream
 
 const BODY_RADIUS := 2.4
 
@@ -111,6 +113,14 @@ func _build_body(root: Node3D) -> void:
 	head_geo.build_into(_head, "HeadMesh")
 	if head_light:
 		BuildKit.omni(_head, Vector3(0, -1.0, -3.0), accent_color, 6.0, 28.0)
+	if hum and not Engine.is_editor_hint():
+		var engine := AudioStreamPlayer3D.new()
+		engine.stream = hum
+		engine.unit_size = 22.0 * body_scale
+		engine.max_distance = 320.0
+		engine.volume_db = -4.0
+		engine.autoplay = true
+		_head.add_child(engine)
 	_jaw = Node3D.new()
 	_jaw.name = "Jaw"
 	_jaw.position = Vector3(0, -0.9, -1.0)

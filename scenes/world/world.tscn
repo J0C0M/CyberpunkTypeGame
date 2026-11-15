@@ -9,6 +9,10 @@
 [ext_resource type="PackedScene" path="res://scenes/actors/robot_dragon.tscn" id="9_dragon"]
 [ext_resource type="Script" path="res://scripts/actors/npc_crowd.gd" id="10_crowd"]
 [ext_resource type="PackedScene" path="res://scenes/actors/npc.tscn" id="11_npc"]
+[ext_resource type="Script" path="res://scripts/weapons/impact_effects.gd" id="12_impacts"]
+[ext_resource type="PackedScene" path="res://scenes/props/ammo_crate.tscn" id="13_crate"]
+[ext_resource type="AudioStream" path="res://assets/audio/city_ambience.wav" id="14_ambience"]
+[ext_resource type="AudioStream" path="res://assets/audio/dragon_hum.wav" id="15_hum"]
 
 [node name="World" type="Node3D"]
 
@@ -77,6 +81,7 @@ phase = 0.7
 obstacle_sources = Array[NodePath]([NodePath("../../City"), NodePath("../../Skyline")])
 
 [node name="MainStreetDragon" parent="Dragons" instance=ExtResource("9_dragon")]
+hum = ExtResource("15_hum")
 flight_path = NodePath("../MainStreetLoop")
 speed = 30.0
 segment_count = 28
@@ -86,6 +91,7 @@ start_offset = 0.18
 head_light = true
 
 [node name="CrossStreetDragon" parent="Dragons" instance=ExtResource("9_dragon")]
+hum = ExtResource("15_hum")
 flight_path = NodePath("../CrossStreetLoop")
 speed = 27.0
 segment_count = 28
@@ -97,6 +103,7 @@ start_offset = 0.6
 head_light = true
 
 [node name="BlockDragon" parent="Dragons" instance=ExtResource("9_dragon")]
+hum = ExtResource("15_hum")
 flight_path = NodePath("../InnerLoop")
 speed = 26.0
 segment_count = 30
@@ -134,6 +141,17 @@ npc_scene = ExtResource("11_npc")
 
 [node name="SushiCafe" parent="." instance=ExtResource("5_cafe")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 24, 0, -9)
+
+[node name="AmmoCrate" parent="." instance=ExtResource("13_crate")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 19, 0.15, -10.25)
+
+[node name="ImpactEffects" type="Node3D" parent="."]
+script = ExtResource("12_impacts")
+
+[node name="CityAmbience" type="AudioStreamPlayer" parent="."]
+stream = ExtResource("14_ambience")
+volume_db = -12.0
+autoplay = true
 
 [node name="Player" parent="." instance=ExtResource("2_player")]
 transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, 24, 0.15, -13)

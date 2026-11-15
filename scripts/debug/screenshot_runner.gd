@@ -4,10 +4,12 @@ extends Node
 ## Usage (everything after `--` is passed to the game):
 ##   godot --path . -- --shots=/tmp/city --views="0,1.7,0,0,0;20,30,40,45,-20" --frames=60
 ## Each view is "x,y,z,yaw_degrees,pitch_degrees"; images are saved as <shots>_<index>.png.
+## --fire-frames=N fires the player's rifle during the last N frames of each view.
 
 var shot_prefix := ""
 var views: Array[PackedFloat64Array] = []
 var frames_per_view := 60
+var fire_frames := 0
 
 var _view_index := 0
 var _frame := 0
@@ -20,6 +22,8 @@ static func from_cmdline() -> Node:
 			runner.shot_prefix = arg.trim_prefix("--shots=")
 		elif arg.begins_with("--frames="):
 			runner.frames_per_view = int(arg.trim_prefix("--frames="))
+		elif arg.begins_with("--fire-frames="):
+			runner.fire_frames = int(arg.trim_prefix("--fire-frames="))
 		elif arg.begins_with("--views="):
 			for view in arg.trim_prefix("--views=").split(";", false):
 				runner.views.append(view.split_floats(","))
@@ -37,6 +41,9 @@ func _ready() -> void:
 
 func _process(_delta: float) -> void:
 	_frame += 1
+	var player := get_tree().get_first_node_in_group("player") as Player
+	if player and _frame > frames_per_view - fire_frames and player.weapon.ammo_in_magazine > 0:
+		player.weapon.call("_fire")
 	if _frame < frames_per_view:
 		return
 	var path := "%s_%d.png" % [shot_prefix, _view_index]

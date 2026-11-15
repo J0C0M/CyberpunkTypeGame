@@ -21,11 +21,14 @@ extends CharacterBody3D
 @onready var head: Node3D = $Head
 @onready var recoil_pivot: Node3D = $Head/RecoilPivot
 @onready var camera: Camera3D = $Head/RecoilPivot/Camera3D
+@onready var weapon: Rifle = $Head/RecoilPivot/Camera3D/WeaponHolder/Rifle
+@onready var footsteps: AudioStreamPlayer = $Footsteps
 
 var is_sprinting := false
 
 var _gravity: float = ProjectSettings.get_setting("physics/3d/default_gravity")
 var _bob_phase := 0.0
+var _last_step := 0
 var _camera_rest := Vector3.ZERO
 ## Visual recoil offset (x = pitch, y = yaw) that springs back to zero.
 var _recoil := Vector2.ZERO
@@ -77,6 +80,12 @@ func _update_camera_effects(delta: float) -> void:
 		_bob_phase += delta * bob_frequency * TAU * (speed / walk_speed) * 0.5
 	else:
 		_bob_phase = lerpf(_bob_phase, roundf(_bob_phase / PI) * PI, 1.0 - exp(-8.0 * delta))
+	# A footstep each time the bob passes the bottom of its cycle.
+	var step := floori(_bob_phase / PI)
+	if step != _last_step and is_on_floor() and speed > 0.5:
+		footsteps.pitch_scale = randf_range(0.85, 1.15)
+		footsteps.play()
+	_last_step = step
 	var bob_strength := clampf(speed / walk_speed, 0.0, 1.5) * bob_amount
 	camera.position = _camera_rest + Vector3(cos(_bob_phase) * bob_strength * 0.5, absf(sin(_bob_phase)) * bob_strength, 0.0)
 
