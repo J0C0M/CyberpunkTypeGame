@@ -1,13 +1,19 @@
 [gd_scene format=3]
 
 [ext_resource type="Script" path="res://scripts/main.gd" id="1_main"]
-[ext_resource type="PackedScene" path="res://scenes/world/world.tscn" id="2_world"]
+[ext_resource type="Script" path="res://scripts/core/retro_screen.gd" id="2_retro"]
+[ext_resource type="Shader" path="res://shaders/retro_post.gdshader" id="3_post"]
+[ext_resource type="PackedScene" path="res://scenes/world/world.tscn" id="4_world"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_post"]
+shader = ExtResource("3_post")
 
 [node name="Main" type="Node"]
 script = ExtResource("1_main")
 
 [node name="RetroScreen" type="SubViewportContainer" parent="."]
 texture_filter = 1
+material = SubResource("ShaderMaterial_post")
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
@@ -15,6 +21,7 @@ grow_horizontal = 2
 grow_vertical = 2
 stretch = true
 stretch_shrink = 2
+script = ExtResource("2_retro")
 
 [node name="SubViewport" type="SubViewport" parent="RetroScreen"]
 handle_input_locally = false
@@ -22,4 +29,4 @@ audio_listener_enable_3d = true
 size = Vector2i(640, 360)
 render_target_update_mode = 4
 
-[node name="World" parent="RetroScreen/SubViewport" instance=ExtResource("2_world")]
+[node name="World" parent="RetroScreen/SubViewport" instance=ExtResource("4_world")]
