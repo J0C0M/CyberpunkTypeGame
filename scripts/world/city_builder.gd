@@ -396,7 +396,7 @@ func _storefront(geo: GeoBatch, xf: Transform3D, width: float) -> void:
 		return
 
 	var window_width := width - 3.4
-	var glow := MatLib.neon(_shop_light_color(), 0.7)
+	var glow := MatLib.neon(_shop_light_color(), 0.45)
 	var silhouette := MatLib.surface(Color(0.02, 0.02, 0.03), 0.8, 0.0, 0.0)
 	geo.add_box(Vector3(window_width, 2.8, 0.02), _at(xf, 0.6 + window_width * 0.5, 1.9, 0.02), glow)
 	for i in 3:
@@ -477,6 +477,7 @@ func _street_lamp(pos: Vector3, toward_road: Vector3, metal: Material, light_col
 	_props.add_box_at(head_size * Vector3(0.85, 0.3, 0.75), arm_end - Vector3.UP * 0.09, MatLib.neon(light_color, 5.0, flicker, 0.0, _rng.randf()))
 	if lit:
 		BuildKit.down_spot(_lights, arm_end - Vector3.UP * 0.2, light_color, 3.5, 13.0, 55.0)
+		BuildKit.box_collider_at(_body, Vector3(0.25, 6.6, 0.25), pos + Vector3.UP * 3.3)
 
 
 func _build_corner_props() -> void:
@@ -486,6 +487,7 @@ func _build_corner_props() -> void:
 			var corner := Vector3(sx * (ROAD_HALF + 0.5), CURB_HEIGHT, sz * (ROAD_HALF + 0.5))
 			# Traffic light: red for the main street on one diagonal, green on the other.
 			_props.add_cylinder(0.09, 0.09, 4.6, 6, Transform3D(Basis.IDENTITY, corner + Vector3.UP * 2.3), metal)
+			BuildKit.box_collider_at(_body, Vector3(0.22, 4.6, 0.22), corner + Vector3.UP * 2.3)
 			var red_main := sx * sz > 0.0
 			for axis in 2:
 				var facing := Vector3(-sx, 0, 0) if axis == 0 else Vector3(0, 0, -sz)
@@ -501,6 +503,7 @@ func _build_corner_props() -> void:
 				var along_x := corner + Vector3(sx * (1.2 + i * 1.0), 0, -sz * 0.05)
 				_props.add_cylinder(0.12, 0.12, 0.8, 6, Transform3D(Basis.IDENTITY, along_x + Vector3.UP * 0.4), metal)
 				_props.add_cylinder(0.13, 0.13, 0.06, 6, Transform3D(Basis.IDENTITY, along_x + Vector3.UP * 0.82), MatLib.neon(Palette.AMBER, 4.0))
+				BuildKit.box_collider_at(_body, Vector3(0.24, 0.85, 0.24), along_x + Vector3.UP * 0.42)
 	# Holographic advert column on the north-west corner.
 	var column := Vector3(-SIDEWALK_OUTER + 0.6, CURB_HEIGHT, -SIDEWALK_OUTER + 0.6)
 	_props.add_box_at(Vector3(1.0, 3.6, 1.0), column + Vector3.UP * 1.8, metal)

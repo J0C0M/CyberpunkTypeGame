@@ -7,6 +7,8 @@
 [ext_resource type="PackedScene" path="res://scenes/world/skyline.tscn" id="7_skyline"]
 [ext_resource type="Script" path="res://scripts/world/flight_path.gd" id="8_flight"]
 [ext_resource type="PackedScene" path="res://scenes/actors/robot_dragon.tscn" id="9_dragon"]
+[ext_resource type="Script" path="res://scripts/actors/npc_crowd.gd" id="10_crowd"]
+[ext_resource type="PackedScene" path="res://scenes/actors/npc.tscn" id="11_npc"]
 
 [node name="World" type="Node3D"]
 
@@ -122,6 +124,13 @@ accent_color = Color(1, 0.58, 0.12, 1)
 eye_color = Color(1, 0.1, 0.16, 1)
 wave_amplitude = 4.0
 start_offset = 0.7
+
+[node name="Crowd" type="Node3D" parent="."]
+script = ExtResource("10_crowd")
+city = NodePath("../City")
+npc_scene = ExtResource("11_npc")
+
+[node name="NavigationRegion3D" type="NavigationRegion3D" parent="Crowd"]
 
 [node name="SushiCafe" parent="." instance=ExtResource("5_cafe")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 24, 0, -9)
