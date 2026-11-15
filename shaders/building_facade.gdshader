@@ -23,8 +23,9 @@ uniform float far_fade_end = 2600.0;
 
 varying vec3 world_pos;
 varying vec3 world_normal;
-varying vec4 instance_data;
-varying vec4 vertex_data;
+// Flat: interpolating identical values still jitters by an ULP, which the hashes would amplify.
+varying flat vec4 instance_data;
+varying flat vec4 vertex_data;
 
 void vertex() {
 	world_pos = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
@@ -50,7 +51,7 @@ void fragment() {
 		lit = vertex_data.a;
 		albedo *= vertex_data.rgb * 1.6;
 	} else if (variation_source == 2) {
-		building_seed = instance_data.x;
+		building_seed = floor(instance_data.x);
 		lit = instance_data.y;
 		albedo *= 0.6 + instance_data.z;
 	}

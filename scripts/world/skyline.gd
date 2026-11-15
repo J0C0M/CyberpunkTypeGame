@@ -27,6 +27,7 @@ const ZONES := [
 @export_tool_button("Rebuild skyline") var rebuild_action := build
 
 var _rng := RandomNumberGenerator.new()
+var _towers: Array[Dictionary] = []
 var _beams: Array[Node3D] = []
 var _beam_speeds: PackedFloat32Array = []
 
@@ -49,6 +50,7 @@ func build() -> void:
 	_rng.seed = skyline_seed
 	var root := BuildKit.generated_root(self, "Generated")
 	var towers := _place_towers()
+	_towers = towers
 	_build_tower_instances(root, towers)
 	_build_tower_details(root, towers)
 	_build_billboards(root, towers)
@@ -56,6 +58,16 @@ func build() -> void:
 	_build_traffic(root)
 	_build_searchlights(root, towers)
 	_build_backdrop(root)
+
+
+## Tallest tower top (including masts) inside `area` on the XZ plane.
+func max_height_in(area: Rect2) -> float:
+	var top := 0.0
+	for tower in _towers:
+		var size: Vector2 = tower["size"]
+		if Rect2(tower["center"] - size * 0.5, size).intersects(area):
+			top = maxf(top, tower["height"] + tower.get("mast", 0.0))
+	return top
 
 
 # --- Towers ----------------------------------------------------------------------------------
@@ -153,6 +165,7 @@ func _build_tower_details(root: Node3D, towers: Array[Dictionary]) -> void:
 		if height > 100.0 and _rng.randf() < 0.3:
 			var mast_height := _rng.randf_range(15.0, 60.0)
 			masts.append(Transform3D(Basis.from_scale(Vector3(1.2, mast_height, 1.2)), Vector3(center.x, height, center.y)))
+			tower["mast"] = mast_height
 			top += mast_height
 		if height > 110.0 or top > height:
 			lights.append(Transform3D(Basis.from_scale(Vector3.ONE * light_scale), Vector3(center.x, top + light_scale * 0.5, center.y)))

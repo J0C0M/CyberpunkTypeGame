@@ -34,6 +34,8 @@ const BLADE_NAMES := ["BAR", "HOTEL", "CLUB", "ZEN", "KOI", "LOVE", "DOJO", "ラ
 
 ## Walkable sidewalk and crosswalk triangles for the NPC navmesh (filled by build()).
 var walkable_faces := PackedVector3Array()
+## [Rect2 footprint on the XZ plane, top height] for every building (see max_height_in).
+var _footprints: Array = []
 
 var _rng := RandomNumberGenerator.new()
 var _root: Node3D
@@ -51,6 +53,7 @@ func _ready() -> void:
 func build() -> void:
 	BuildKit.clear_generated(self)
 	walkable_faces = PackedVector3Array()
+	_footprints.clear()
 	_rng.seed = city_seed
 	_root = BuildKit.generated_root(self, "Generated")
 	_body = BuildKit.static_body(_root, "Collision")
@@ -79,6 +82,15 @@ func build() -> void:
 
 	_ground.build_into(_root, "Streets", false)
 	_props.build_into(_root, "StreetProps")
+
+
+## Tallest building top inside `area` (XZ plane); used to keep flight paths above the roofs.
+func max_height_in(area: Rect2) -> float:
+	var top := 0.0
+	for footprint in _footprints:
+		if (footprint[0] as Rect2).intersects(area):
+			top = maxf(top, footprint[1])
+	return top
 
 
 # --- Layout helpers -------------------------------------------------------------------------
@@ -269,6 +281,9 @@ func _build_building(geo: GeoBatch, xf: Transform3D, width: float, near: bool, i
 		geo.add_box(Vector3(setback_width, setback_height, setback_depth), _at(xf, width * 0.5, height + setback_height * 0.5, -depth * 0.5 - 1.5), facade)
 		top = height + setback_height
 	geo.color = Color.WHITE
+	var a := xf * Vector3(0, 0, 0)
+	var b := xf * Vector3(width, 0, -depth)
+	_footprints.append([Rect2(Vector2(minf(a.x, b.x), minf(a.z, b.z)), Vector2(absf(b.x - a.x), absf(b.z - a.z))), top + 16.0])
 
 	if near:
 		_decorate_near_building(geo, xf, width, height, top, is_cafe)

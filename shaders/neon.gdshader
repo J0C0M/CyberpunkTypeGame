@@ -17,7 +17,7 @@ uniform float seed = 0.0;
 // For MultiMesh use: INSTANCE_CUSTOM.rgb replaces `color` and .a replaces `seed`.
 uniform bool use_instance_custom = false;
 
-varying vec4 instance_data;
+varying flat vec4 instance_data;
 
 void vertex() {
 	instance_data = INSTANCE_CUSTOM;
