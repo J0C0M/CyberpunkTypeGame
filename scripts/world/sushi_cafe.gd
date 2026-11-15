@@ -49,8 +49,8 @@ func _process(delta: float) -> void:
 
 
 func _build_shell(geo: GeoBatch, body: StaticBody3D) -> void:
-	var floor_mat := MatLib.surface(Color(0.09, 0.06, 0.06), 0.25, 0.0, 0.1)
-	var wall_mat := MatLib.surface(Color(0.16, 0.1, 0.09), 0.7)
+	var floor_mat := MatLib.surface(Color(0.24, 0.14, 0.1), 0.3, 0.0, 0.1)
+	var wall_mat := MatLib.surface(Color(0.32, 0.2, 0.15), 0.7)
 	var slat_mat := MatLib.surface(Palette.WOOD, 0.6)
 	var dark_mat := MatLib.surface(Palette.METAL_DARK, 0.5, 0.4)
 
@@ -98,10 +98,10 @@ func _build_front(geo: GeoBatch, root: Node3D) -> void:
 	geo.add_bar(Vector3(-1.3, 2.62, -0.05), Vector3(1.3, 2.62, -0.05), 0.04, MatLib.surface(Palette.WOOD, 0.6))
 
 	# Main sign on the facade band, framed with neon tubes.
-	var front := Transform3D(Basis.IDENTITY, Vector3(0, 4.05, 0.02))
+	var front := Transform3D(Basis.IDENTITY, Vector3(0, 4.05, 0.08))
 	BuildKit.neon_text(root, "SUSHI KAITEN", front, Palette.PINK, 0.75)
-	BuildKit.neon_text(root, "回転寿司", Transform3D(Basis.IDENTITY, Vector3(4.6, 4.05, 0.02)), Palette.CYAN, 0.5)
-	BuildKit.neon_text(root, "24H", Transform3D(Basis.IDENTITY, Vector3(-4.8, 4.05, 0.02)), Palette.AMBER, 0.5)
+	BuildKit.neon_text(root, "回転寿司", Transform3D(Basis.IDENTITY, Vector3(4.6, 4.05, 0.08)), Palette.CYAN, 0.5)
+	BuildKit.neon_text(root, "24H", Transform3D(Basis.IDENTITY, Vector3(-4.8, 4.05, 0.08)), Palette.AMBER, 0.5)
 	var pink := MatLib.neon(Palette.PINK, 4.0)
 	geo.add_polyline(PackedVector3Array([
 		Vector3(-2.9, 3.55, 0.03), Vector3(2.9, 3.55, 0.03), Vector3(2.9, 4.55, 0.03), Vector3(-2.9, 4.55, 0.03),
@@ -118,8 +118,8 @@ func _build_front(geo: GeoBatch, root: Node3D) -> void:
 		Vector3(5.5, 4.85, 0.25), Vector3(5.5, 8.35, 0.25), Vector3(5.5, 8.35, 1.25), Vector3(5.5, 4.85, 1.25),
 	]), 0.04, blade_neon, true)
 	var side_x := Basis(Vector3.UP, PI * 0.5)
-	BuildKit.neon_text(root, "寿\n司", Transform3D(side_x, Vector3(5.71, 6.6, 0.75)), Palette.AMBER, 1.1)
-	BuildKit.neon_text(root, "寿\n司", Transform3D(side_x.rotated(Vector3.UP, PI), Vector3(5.49, 6.6, 0.75)), Palette.AMBER, 1.1)
+	BuildKit.neon_text(root, "寿\n司", Transform3D(side_x, Vector3(5.76, 6.6, 0.75)), Palette.AMBER, 1.1)
+	BuildKit.neon_text(root, "寿\n司", Transform3D(side_x.rotated(Vector3.UP, PI), Vector3(5.44, 6.6, 0.75)), Palette.AMBER, 1.1)
 
 	# "OPEN" sign hanging inside the left window.
 	BuildKit.neon_text(root, "OPEN", Transform3D(Basis.IDENTITY, Vector3(-2.45, 2.4, -0.3)), Palette.RED, 0.45)
@@ -290,7 +290,7 @@ func _build_plates(root: Node3D) -> void:
 
 
 func _build_lights(root: Node3D) -> void:
-	BuildKit.omni(root, Vector3(0, 3.9, -3.5), Color(1.0, 0.55, 0.5), 3.0, 11.0, true)
+	BuildKit.omni(root, Vector3(0, 3.9, -3.5), Color(1.0, 0.6, 0.5), 3.2, 11.0, true)
 	BuildKit.omni(root, Vector3(0, 3.0, COUNTER_Z), Color(1.0, 0.75, 0.55), 1.6, 6.0)
 	BuildKit.omni(root, Vector3(0, 3.2, -10.6), Palette.CYAN, 1.2, 7.0)
 	BuildKit.omni(root, Vector3(-4.5, 2.5, -1.5), Palette.PINK, 0.9, 5.0)

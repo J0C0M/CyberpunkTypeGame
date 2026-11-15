@@ -17,6 +17,10 @@ const _BOX_FACES := [
 	[Vector3(0, 0, -1), Vector3.LEFT, Vector3.UP],
 ]
 
+## Vertex colour written with every new vertex. Shaders may use it as per-piece data
+## (the facade shader reads rgb as a wall tint and alpha as the lit-window ratio).
+var color := Color.WHITE
+
 var _tools := {}
 var _materials: Array[Material] = []
 
@@ -54,6 +58,20 @@ func add_box(size: Vector3, xform: Transform3D, material: Material) -> void:
 ## Convenience: axis-aligned box given its centre.
 func add_box_at(size: Vector3, center: Vector3, material: Material) -> void:
 	add_box(size, Transform3D(Basis.IDENTITY, center), material)
+
+
+## Rectangle facing local +Z of `xform` with UVs from 0 to 1 (adverts, screens).
+func add_quad(size: Vector2, xform: Transform3D, material: Material) -> void:
+	var st := _tool(material)
+	var hx := size.x * 0.5
+	var hy := size.y * 0.5
+	var n := (xform.basis * Vector3.BACK).normalized()
+	_vertex(st, n, Vector2(0, 1), xform * Vector3(-hx, -hy, 0))
+	_vertex(st, n, Vector2(1, 0), xform * Vector3(hx, hy, 0))
+	_vertex(st, n, Vector2(1, 1), xform * Vector3(hx, -hy, 0))
+	_vertex(st, n, Vector2(0, 1), xform * Vector3(-hx, -hy, 0))
+	_vertex(st, n, Vector2(0, 0), xform * Vector3(-hx, hy, 0))
+	_vertex(st, n, Vector2(1, 0), xform * Vector3(hx, hy, 0))
 
 
 ## Flat-shaded prism/cylinder/cone along local Y, centred on `xform.origin`.
@@ -159,6 +177,7 @@ func _tool(material: Material) -> SurfaceTool:
 
 
 func _vertex(st: SurfaceTool, normal: Vector3, uv: Vector2, position: Vector3) -> void:
+	st.set_color(color)
 	st.set_normal(normal)
 	st.set_uv(uv)
 	st.add_vertex(position)

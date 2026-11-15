@@ -2,39 +2,8 @@
 
 [ext_resource type="Environment" path="res://assets/environment/night_city_environment.tres" id="1_env"]
 [ext_resource type="PackedScene" path="res://scenes/player/player.tscn" id="2_player"]
-[ext_resource type="Shader" path="res://shaders/ps1_surface.gdshader" id="3_surface"]
-[ext_resource type="Shader" path="res://shaders/neon.gdshader" id="4_neon"]
 [ext_resource type="PackedScene" path="res://scenes/world/sushi_cafe.tscn" id="5_cafe"]
-
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_floor"]
-shader = ExtResource("3_surface")
-shader_parameter/albedo = Color(0.06, 0.06, 0.08, 1)
-shader_parameter/roughness = 0.15
-
-[sub_resource type="BoxMesh" id="BoxMesh_floor"]
-material = SubResource("ShaderMaterial_floor")
-size = Vector3(60, 1, 60)
-
-[sub_resource type="BoxShape3D" id="BoxShape3D_floor"]
-size = Vector3(60, 1, 60)
-
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_pink"]
-shader = ExtResource("4_neon")
-shader_parameter/color = Color(1, 0.16, 0.62, 1)
-shader_parameter/energy = 4.0
-
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_cyan"]
-shader = ExtResource("4_neon")
-shader_parameter/color = Color(0.1, 0.88, 1, 1)
-shader_parameter/energy = 4.0
-
-[sub_resource type="BoxMesh" id="BoxMesh_pink"]
-material = SubResource("ShaderMaterial_pink")
-size = Vector3(0.2, 4, 0.2)
-
-[sub_resource type="BoxMesh" id="BoxMesh_cyan"]
-material = SubResource("ShaderMaterial_cyan")
-size = Vector3(0.2, 4, 0.2)
+[ext_resource type="PackedScene" path="res://scenes/world/city.tscn" id="6_city"]
 
 [node name="World" type="Node3D"]
 
@@ -46,32 +15,7 @@ transform = Transform3D(0.866025, 0.25, -0.433013, 0, 0.866025, 0.5, 0.5, -0.433
 light_color = Color(0.5, 0.58, 1, 1)
 light_energy = 0.12
 
-[node name="TestFloor" type="StaticBody3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.5, 0)
-
-[node name="Mesh" type="MeshInstance3D" parent="TestFloor"]
-mesh = SubResource("BoxMesh_floor")
-
-[node name="Shape" type="CollisionShape3D" parent="TestFloor"]
-shape = SubResource("BoxShape3D_floor")
-
-[node name="PinkTube" type="MeshInstance3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3, 2, -6)
-mesh = SubResource("BoxMesh_pink")
-
-[node name="PinkLight" type="OmniLight3D" parent="PinkTube"]
-light_color = Color(1, 0.16, 0.62, 1)
-light_energy = 3.0
-omni_range = 9.0
-
-[node name="CyanTube" type="MeshInstance3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3, 2, -10)
-mesh = SubResource("BoxMesh_cyan")
-
-[node name="CyanLight" type="OmniLight3D" parent="CyanTube"]
-light_color = Color(0.1, 0.88, 1, 1)
-light_energy = 3.0
-omni_range = 9.0
+[node name="City" parent="." instance=ExtResource("6_city")]
 
 [node name="SushiCafe" parent="." instance=ExtResource("5_cafe")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 24, 0, -9)
