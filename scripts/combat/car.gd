@@ -66,6 +66,7 @@ func _ready() -> void:
 	if Engine.is_editor_hint():
 		return
 	add_to_group("resettable")
+	add_to_group("cover")
 	_health = Damageable.new()
 	_health.max_health = max_health
 	add_child(_health)
@@ -252,3 +253,15 @@ func _make_plume(fire: bool) -> GPUParticles3D:
 	particles.visibility_aabb = AABB(Vector3(-4, -1, -4), Vector3(8, 16, 8))
 	particles.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	return particles
+
+
+## Ground outline (world space) for the enemies' navmesh and their cover search.
+func cover_outline() -> PackedVector3Array:
+	var outline := PackedVector3Array()
+	for corner: Vector2 in [Vector2(-2.2, -0.95), Vector2(2.2, -0.95), Vector2(2.2, 0.95), Vector2(-2.2, 0.95)]:
+		outline.append(global_transform * Vector3(corner.x, 0.0, corner.y))
+	return outline
+
+
+func cover_height() -> float:
+	return 1.6

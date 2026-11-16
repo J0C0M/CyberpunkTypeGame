@@ -710,12 +710,13 @@ func _build_street_signs() -> void:
 			var pos := Vector3(sx * (SIDEWALK_OUTER - 0.45), CURB_HEIGHT, sz * (SIDEWALK_OUTER - 0.45))
 			var geo := GeoBatch.new()
 			geo.add_cylinder(0.05, 0.05, 3.0, 6, Transform3D(Basis.IDENTITY, Vector3.UP * 1.5), metal)
-			geo.add_box_at(Vector3(1.0, 0.3, 0.04), Vector3(0, 2.7, 0), plate)
-			geo.add_box_at(Vector3(0.04, 0.3, 1.0), Vector3(0, 2.35, 0), plate)
-			geo.add_polyline(PackedVector3Array([Vector3(-0.5, 2.55, 0.03), Vector3(0.5, 2.55, 0.03), Vector3(0.5, 2.85, 0.03), Vector3(-0.5, 2.85, 0.03)]), 0.015, MatLib.neon(Palette.CYAN, 3.0), true)
+			# The plates hang beside the pole (not through it), so the pole never cuts the lettering.
+			geo.add_box_at(Vector3(1.0, 0.3, 0.04), Vector3(0, 2.7, 0.08), plate)
+			geo.add_box_at(Vector3(0.04, 0.3, 1.0), Vector3(0.08, 2.35, 0), plate)
+			geo.add_polyline(PackedVector3Array([Vector3(-0.5, 2.55, 0.105), Vector3(0.5, 2.55, 0.105), Vector3(0.5, 2.85, 0.105), Vector3(-0.5, 2.85, 0.105)]), 0.015, MatLib.neon(Palette.CYAN, 3.0), true)
 			var sign := _prop(Transform3D(Basis(Vector3.UP, 0.0 if sz < 0.0 else PI), pos), geo, [[Vector3(0.15, 3.0, 0.15), Transform3D(Basis.IDENTITY, Vector3.UP * 1.5)]], 60.0, BreakableProp.Kind.METAL, Vector3(1.0, 3.0, 1.0), PackedColorArray([Palette.METAL_DARK, Color(0.03, 0.1, 0.25)]))
-			BuildKit.neon_text(sign.visual, "KABUKI AVE", Transform3D(Basis.IDENTITY, Vector3(0, 2.7, 0.03)), Palette.CYAN, 0.16)
-			BuildKit.neon_text(sign.visual, "CROW ST", Transform3D(Basis(Vector3.UP, PI * 0.5), Vector3(0.03, 2.35, 0)), Palette.CYAN, 0.16)
+			BuildKit.neon_text(sign.visual, "KABUKI AVE", Transform3D(Basis.IDENTITY, Vector3(0, 2.7, 0.105)), Palette.CYAN, 0.16)
+			BuildKit.neon_text(sign.visual, "CROW ST", Transform3D(Basis(Vector3.UP, PI * 0.5), Vector3(0.105, 2.35, 0)), Palette.CYAN, 0.16)
 			_keep_clear.append(Rect2(pos.x - 1.0, pos.z - 1.0, 2.0, 2.0))
 
 

@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Script" path="res://scripts/items/item_data.gd" id="1_item"]
+
+[resource]
+script = ExtResource("1_item")
+id = &"ammo_9mm"
+display_name = "9mm Rounds"
+category = &"ammo"
+price = 1
+pack = 24
+stack_size = 120
+description = "Pistol rounds, two dozen to a box."
+inspect_text = "Brass-cased 9mm in a cheap plastic tray. Half the street carries these. The other half carries something bigger."
+model = &"ammo_box"
+tint = Color(1, 0.16, 0.62, 1)

@@ -79,9 +79,11 @@ func _unhandled_input(event: InputEvent) -> void:
 
 func _refresh() -> void:
 	_mood.text = "MOOD: %s   REP: %+.2f" % [_merchant.mood_text().to_upper(), _merchant.reputation()]
-	_player_header.text = "YOUR STUFF        ¢ %d" % GameState.credits
+	var bag := GameState.inventory
+	_player_header.text = "YOUR STUFF   %d/%d SLOTS   ¢ %d" % [bag.used_slots(), bag.capacity, GameState.credits]
 	_merchant_header.text = "%s'S STOCK        ¢ %d" % [_merchant.display_name.to_upper(), _merchant.cash]
-	_player_ids = GameState.inventory.ids()
+	# Key items and your own gear never show up for sale.
+	_player_ids.assign(bag.ids().filter(func(id: StringName) -> bool: return ItemDB.is_sellable(id)))
 	_merchant_ids = _merchant.stock.ids()
 	_fill(_player_list, _player_ids, GameState.inventory, false)
 	_fill(_merchant_list, _merchant_ids, _merchant.stock, true)
@@ -94,7 +96,7 @@ func _fill(list: ItemList, ids: Array[StringName], bag: Inventory, buying: bool)
 		var pack := ItemDB.pack_size(id)
 		var price := _merchant.sell_price(id) if buying else _merchant.buy_price(id)
 		var title := ItemDB.display_name(id) + (" (%d)" % pack if pack > 1 else "")
-		var index := list.add_item("%-24s x%-4d %5d ¢" % [title, bag.count(id), price])
+		var index := list.add_item("%-24s x%-4d %5d ¢" % [title, bag.count(id), price], ItemIcons.icon(id))
 		list.set_item_custom_fg_color(index, ItemDB.color(id).lerp(Color.WHITE, 0.35))
 		if id == _selected and buying == _buying:
 			list.select(index)
@@ -321,5 +323,7 @@ func _list_column(parent: Control, color: Color) -> Array:
 	list.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	list.custom_minimum_size = Vector2(0, 250)
 	UiStyle.style_list(list, color)
+	list.fixed_icon_size = Vector2i(28, 28)
+	list.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	column.add_child(list)
 	return [header, list]

@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Script" path="res://scripts/items/item_data.gd" id="1_item"]
+
+[resource]
+script = ExtResource("1_item")
+id = &"reflex_wire"
+display_name = "Reflex Wire Kit"
+category = &"cyberware"
+price = 340
+pack = 1
+stack_size = 3
+description = "Faster hands. Twitchier nights."
+inspect_text = "Coils of synthetic nerve fibre in a foam case. Not a home-install job."
+model = &"wire_kit"

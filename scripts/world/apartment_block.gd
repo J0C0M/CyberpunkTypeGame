@@ -23,6 +23,8 @@ const CAB_HALF := 1.2
 const CAB_DEPTH := 2.4
 ## The player's apartment: the street-side corner unit.
 const APARTMENT_X := 1.6
+## The window at the hallway's east end: from/to along Z, and its sill and lintel above the floor.
+const HALL_WINDOW := Vector4(-9.8, -8.4, 0.8, 2.4)
 const ACCENT := Color(0.62, 0.28, 1.0)
 
 const DING := preload("res://assets/audio/elevator_ding.wav")
@@ -47,6 +49,10 @@ var _tv: TvSet
 var _seated: Player
 var _seat_return := Transform3D.IDENTITY
 var _seat_lock := 0.0
+## The seated view and how far the player has looked around from it (yaw, pitch in radians).
+var _seat_view := Transform3D.IDENTITY
+var _seat_look := Vector2.ZERO
+var _seat_ready := false
 var _fridge_stocked := true
 
 
@@ -66,8 +72,12 @@ func _ready() -> void:
 	_geo.build_into(_root, "BlockGeometry")
 	if not Engine.is_editor_hint():
 		GameState.register_place(&"apartment", "Neo-Heights 1107", global_transform * Vector3(0, 0, 2.0))
+		# Where the player wakes up after sleeping or a flatline: next to the bed.
+		GameState.places[&"respawn_home"] = {"label": "", "position": to_global(Vector3(3.9, UPPER_Y + 0.05, -2.2)), "yaw": global_rotation.y + PI}
 		GameState.night_passed.connect(func() -> void: _fridge_stocked = true)
 		_add_music_zones()
+		add_to_group("saveable")
+		add_to_group("seat")
 
 
 func _half() -> float:
@@ -146,6 +156,8 @@ func _build_lobby() -> void:
 	BuildKit.omni(_root, Vector3(3.0, LOBBY_HEIGHT - 0.5, -3.0), ACCENT, 1.4, 9.0)
 	BuildKit.omni(_root, Vector3(SHAFT_X, LOBBY_HEIGHT - 0.5, HALL_BACK_Z + 2.0), Palette.WARM_WHITE, 1.6, 8.0)
 	BuildKit.omni(_root, Vector3(half - 2.6, LOBBY_HEIGHT - 0.5, -4.0), Palette.WARM_WHITE, 1.2, 7.0)
+	# General fill so the lobby reads as a lit room, not a cave.
+	BuildKit.omni(_root, Vector3(0.0, LOBBY_HEIGHT - 0.4, -5.0), Palette.COOL_WHITE, 1.4, 12.0)
 	for x: float in [-4.5, 0.0, 4.5]:
 		_geo.add_box_at(Vector3(1.6, 0.04, 0.3), Vector3(x, LOBBY_HEIGHT - 0.03, -1.5), MatLib.neon(Palette.WARM_WHITE, 2.5))
 	if not Engine.is_editor_hint():
@@ -301,8 +313,12 @@ func _ride(player: Player, from_level: int) -> void:
 	_hum.global_position = player.global_position
 	_hum.play()
 	await get_tree().create_timer(0.7).timeout
+	if _ride_interrupted(player):
+		return
 	var hud := get_tree().get_first_node_in_group("hud")
 	await hud.fade_to(1.0, 0.5).finished
+	if _ride_interrupted(player):
+		return
 	var rise := (UPPER_Y - FLOOR_Y) * (1.0 if from_level == 0 else -1.0)
 	player.global_position += global_basis.y * rise
 	player.velocity = Vector3.ZERO
@@ -311,7 +327,17 @@ func _ride(player: Player, from_level: int) -> void:
 	SfxPool.play_at(self, DING, player.global_position + Vector3.UP, -6.0, 0.0, 3.0)
 	await hud.fade_to(0.0, 0.5).finished
 	_riding = false
-	GameState.release_ui()
+	if GameState.ui_mode == &"elevator":
+		GameState.release_ui()
+
+
+## Something else took over mid-ride (the player flatlined): stop without touching input.
+func _ride_interrupted(player: Player) -> bool:
+	if player.is_dead or GameState.ui_mode != &"elevator":
+		_riding = false
+		_hum.stop()
+		return true
+	return false
 
 
 # --- 11th floor --------------------------------------------------------------------------------
@@ -335,12 +361,12 @@ func _build_upper_shell() -> void:
 	var sill := UPPER_Y + 0.75
 	var lintel := UPPER_Y + 2.85
 	_wall_with_window(Vector3(-half, bottom, -0.3), Vector3(half, top, 0.0), APARTMENT_X + 0.6, half - 0.6, sill, lintel, facade, true)
-	_wall_with_window(Vector3(half - 0.3, bottom, -depth), Vector3(half, top, 0.0), -7.2, -0.9, sill, lintel, facade, false)
+	# The cross-street side has two openings: the hallway's end window and the apartment's.
+	_wall_with_window(Vector3(half - 0.3, bottom, -depth), Vector3(half, top, HALL_FRONT_Z), HALL_WINDOW.x, HALL_WINDOW.y, UPPER_Y + HALL_WINDOW.z, UPPER_Y + HALL_WINDOW.w, facade, false)
+	_wall_with_window(Vector3(half - 0.3, bottom, HALL_FRONT_Z), Vector3(half, top, 0.0), -7.2, -0.9, sill, lintel, facade, false)
 	_geo.color = Color.WHITE
 	for wall in [[Vector3(width, UPPER_HEIGHT, 0.3), Vector3(0, UPPER_Y + UPPER_HEIGHT * 0.5, -0.15)], [Vector3(0.3, UPPER_HEIGHT, depth), Vector3(half - 0.15, UPPER_Y + UPPER_HEIGHT * 0.5, -depth * 0.5)], [Vector3(0.3, UPPER_HEIGHT, depth), Vector3(-half + 0.15, UPPER_Y + UPPER_HEIGHT * 0.5, -depth * 0.5)]]:
 		BuildKit.box_collider_at(_body, wall[0], wall[1])
-	# The hallway's end window looks down the cross street.
-	_window_glass(Vector3(half - 0.15, UPPER_Y + 1.6, (HALL_FRONT_Z + HALL_BACK_Z) * 0.5), Vector3(0.04, 1.6, 1.4))
 
 
 ## A wall slab between `low` and `high` (corners) with a window from `from` to `to` along it.
@@ -392,26 +418,40 @@ func _build_hallway() -> void:
 	_geo.add_box_at(Vector3(1.2, UPPER_HEIGHT - 2.3, 0.3), Vector3(door_x, UPPER_Y + 2.3 + (UPPER_HEIGHT - 2.3) * 0.5, HALL_FRONT_Z + 0.15), lining)
 	_geo.add_box_at(Vector3(0.3, UPPER_HEIGHT, -HALL_FRONT_Z), Vector3(APARTMENT_X - 0.15, UPPER_Y + UPPER_HEIGHT * 0.5, HALL_FRONT_Z * 0.5), lining)
 	BuildKit.box_collider_at(_body, Vector3(0.3, UPPER_HEIGHT, -HALL_FRONT_Z), Vector3(APARTMENT_X - 0.15, UPPER_Y + UPPER_HEIGHT * 0.5, HALL_FRONT_Z * 0.5))
-	# Hallway end walls (the east one has the window built into the shell).
+	# Hallway end walls. The east one lines the shell around the end window (the shell's facade
+	# shader would otherwise paint lit "windows" on the inside of the wall).
 	_geo.add_box_at(Vector3(0.05, UPPER_HEIGHT, hall_width), Vector3(-half + 0.33, UPPER_Y + UPPER_HEIGHT * 0.5, hall_center_z), lining)
+	var east := half - 0.33
+	var sill := UPPER_Y + HALL_WINDOW.z
+	var lintel := UPPER_Y + HALL_WINDOW.w
+	for piece in [[Vector2(HALL_BACK_Z, HALL_WINDOW.x), Vector2(UPPER_Y, UPPER_Y + UPPER_HEIGHT)], [Vector2(HALL_WINDOW.y, HALL_FRONT_Z), Vector2(UPPER_Y, UPPER_Y + UPPER_HEIGHT)],
+			[Vector2(HALL_WINDOW.x, HALL_WINDOW.y), Vector2(UPPER_Y, sill)], [Vector2(HALL_WINDOW.x, HALL_WINDOW.y), Vector2(lintel, UPPER_Y + UPPER_HEIGHT)]]:
+		var span: Vector2 = piece[0]
+		var vertical: Vector2 = piece[1]
+		_geo.add_box_at(Vector3(0.05, vertical.y - vertical.x, span.y - span.x), Vector3(east, (vertical.x + vertical.y) * 0.5, (span.x + span.y) * 0.5), lining)
 	# Doors: the player's apartment and the neighbours' (locked).
-	var doors := [[door_x, HALL_FRONT_Z, 0.0, "1107", false], [-1.2, HALL_FRONT_Z, 0.0, "1106", true], [-6.4, HALL_FRONT_Z, 0.0, "1105", true],
-		[-1.2, HALL_BACK_Z, PI, "1101", true], [1.9, HALL_BACK_Z, PI, "1102", true], [5.0, HALL_BACK_Z, PI, "1103", true]]
+	# A Door faces its local +Z, so front-wall doors turn round (PI) to show their numbers to the hallway.
+	var doors := [[door_x, HALL_FRONT_Z, PI, "1107", false], [-1.2, HALL_FRONT_Z, PI, "1106", true], [-6.4, HALL_FRONT_Z, PI, "1105", true],
+		[-1.2, HALL_BACK_Z, 0.0, "1101", true], [1.9, HALL_BACK_Z, 0.0, "1102", true], [5.0, HALL_BACK_Z, 0.0, "1103", true]]
 	for entry in doors:
 		var door := Door.new()
 		door.number = entry[3]
 		door.locked = entry[4]
+		if entry[3] == "1107":
+			door.key_item = &"keycard_1107"
 		door.accent = ACCENT
 		door.name = "Door" + entry[3]
-		door.position = Vector3(entry[0], UPPER_Y, entry[1] + (0.04 if entry[2] == PI else -0.04) * -1.0)
+		# Just proud of the wall, on the hallway side.
+		door.position = Vector3(entry[0], UPPER_Y, entry[1] + (-0.04 if entry[2] == PI else 0.04))
 		door.rotation.y = entry[2]
 		_root.add_child(door)
 	# Flickering strip lights and a little life on the walls.
 	for i in 4:
 		var x := -half + 2.5 + i * 4.0
 		_geo.add_box_at(Vector3(1.2, 0.04, 0.12), Vector3(x, UPPER_Y + UPPER_HEIGHT - 0.06, hall_center_z), MatLib.neon(Palette.COOL_WHITE, 3.0, 0.15 if i == 2 else 0.0, 0.0, float(i)))
-	BuildKit.omni(_root, Vector3(-3.0, UPPER_Y + UPPER_HEIGHT - 0.4, hall_center_z), Palette.COOL_WHITE, 1.0, 8.0)
-	BuildKit.omni(_root, Vector3(4.0, UPPER_Y + UPPER_HEIGHT - 0.4, hall_center_z), ACCENT, 0.9, 7.0)
+	BuildKit.omni(_root, Vector3(-6.0, UPPER_Y + UPPER_HEIGHT - 0.4, hall_center_z), Palette.COOL_WHITE, 1.5, 8.0)
+	BuildKit.omni(_root, Vector3(-1.0, UPPER_Y + UPPER_HEIGHT - 0.4, hall_center_z), Palette.COOL_WHITE, 1.5, 8.0)
+	BuildKit.omni(_root, Vector3(4.5, UPPER_Y + UPPER_HEIGHT - 0.4, hall_center_z), ACCENT, 1.4, 8.0)
 	BuildKit.neon_text(_root, "NO SMOKING  //  NO DRONES", Transform3D(Basis(Vector3.UP, PI), Vector3(-2.8, UPPER_Y + 2.4, HALL_FRONT_Z - 0.01)), Palette.RED, 0.12)
 
 
@@ -574,12 +614,14 @@ func _sleep(player: Player) -> void:
 	var hud := get_tree().get_first_node_in_group("hud")
 	await hud.fade_to(1.0, 1.2).finished
 	GameState.pass_night(6.0)
+	player.restore_health()
 	player.global_position = to_global(Vector3(3.9, UPPER_Y + 0.05, -2.2))
 	player.velocity = Vector3.ZERO
 	player.rotation.y = global_rotation.y + PI
 	player.head.rotation.x = 0.0
 	await get_tree().create_timer(1.0).timeout
-	get_tree().call_group("hud", "show_message", "You slept six hours. The city tidied up and the shops restocked.", 4.0)
+	var saved := SaveGame.save_game()
+	get_tree().call_group("hud", "show_message", "You slept six hours. The city tidied up and the shops restocked." + ("\nGame saved." if saved else ""), 4.0)
 	await hud.fade_to(0.0, 1.2).finished
 	GameState.release_ui()
 
@@ -595,12 +637,42 @@ func _sit(player: Player) -> void:
 	_seat_return = camera.global_transform
 	camera.top_level = true
 	camera.global_transform = _seat_return
-	player.weapon.get_parent().visible = false
+	player.weapon_holder.visible = false
 	var eye := to_global(Vector3(5.8, UPPER_Y + 1.15, -5.6))
 	var view := Transform3D(Basis.looking_at(_tv.global_position - eye, Vector3.UP), eye)
-	create_tween().tween_property(camera, "global_transform", view, 0.9).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	_seat_view = view
+	_seat_look = Vector2.ZERO
+	_seat_ready = false
+	if not player.died.is_connected(_on_seated_player_died):
+		player.died.connect(_on_seated_player_died)
+	var tween := create_tween()
+	tween.tween_property(camera, "global_transform", view, 0.9).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	tween.tween_callback(func() -> void: _seat_ready = true)
 	_tv.turn_on()
 	get_tree().call_group("hud", "show_message", "A / D  change channel     E / ESC  stand up", 4.0)
+
+
+## Mouse look while seated (routed by Main): a little turn of the head, not a free camera.
+func look_around(relative: Vector2) -> void:
+	if _seated == null or not _seat_ready:
+		return
+	var sensitivity := Settings.mouse_sensitivity
+	_seat_look.x = clampf(_seat_look.x - relative.x * sensitivity, -0.7, 0.7)
+	_seat_look.y = clampf(_seat_look.y - relative.y * sensitivity, -0.35, 0.3)
+	var basis := Basis(Vector3.UP, _seat_look.x) * _seat_view.basis * Basis(Vector3.RIGHT, _seat_look.y)
+	_seated.camera.global_transform = Transform3D(basis, _seat_view.origin)
+
+
+## Shot on the couch (it can happen): drop the seat at once so the flatline owns the camera.
+func _on_seated_player_died(_hit: HitInfo) -> void:
+	if _seated == null:
+		return
+	var player := _seated
+	_seated = null
+	_tv.turn_off()
+	player.camera.top_level = false
+	player.camera.transform = Transform3D.IDENTITY
+	player.weapon_holder.visible = true
 
 
 func _stand_up() -> void:
@@ -613,7 +685,7 @@ func _stand_up() -> void:
 	await tween.finished
 	camera.top_level = false
 	camera.transform = Transform3D.IDENTITY
-	player.weapon.get_parent().visible = true
+	player.weapon_holder.visible = true
 	GameState.release_ui()
 
 
@@ -621,9 +693,23 @@ func _take_soda(_player: Player) -> void:
 	if not _fridge_stocked:
 		get_tree().call_group("hud", "show_message", "Nothing but a lemon. Shops restock overnight; so does the fridge.", 2.5)
 		return
+	if GameState.inventory.add(&"synth_soda", 1) == 0:
+		get_tree().call_group("hud", "show_message", "Your pockets are full.", 2.0)
+		return
 	_fridge_stocked = false
-	GameState.inventory.add(&"synth_soda", 1)
-	get_tree().call_group("hud", "show_message", "+ Synth-Soda", 2.0)
+	get_tree().call_group("hud", "notify_item", "+ Synth-Soda", ItemDB.color(&"synth_soda"))
+
+
+func save_key() -> String:
+	return "apartment_block"
+
+
+func save_data() -> Dictionary:
+	return {"fridge_stocked": _fridge_stocked}
+
+
+func load_data(data: Dictionary) -> void:
+	_fridge_stocked = bool(data.get("fridge_stocked", true))
 
 
 ## Elevator music in the lobby and both cabs, a quiet hallway and a radio in the apartment.

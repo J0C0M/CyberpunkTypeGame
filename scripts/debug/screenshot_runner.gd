@@ -42,8 +42,8 @@ func _ready() -> void:
 func _process(_delta: float) -> void:
 	_frame += 1
 	var player := get_tree().get_first_node_in_group("player") as Player
-	if player and _frame > frames_per_view - fire_frames and player.weapon.ammo_in_magazine > 0:
-		player.weapon.call("_fire")
+	if player and player.weapon and _frame > frames_per_view - fire_frames and player.weapon.ammo_in_magazine > 0:
+		player.weapon.fire()
 	if _frame < frames_per_view:
 		return
 	var path := "%s_%d.png" % [shot_prefix, _view_index]

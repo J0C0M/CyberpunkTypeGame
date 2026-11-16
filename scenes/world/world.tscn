@@ -14,6 +14,12 @@
 [ext_resource type="Script" path="res://scripts/combat/debris_pool.gd" id="16_debris"]
 [ext_resource type="Script" path="res://scripts/core/sfx_pool.gd" id="17_sfx"]
 [ext_resource type="Script" path="res://scripts/combat/explosions.gd" id="18_explosions"]
+[ext_resource type="Script" path="res://scripts/items/item_scatter.gd" id="19_scatter"]
+[ext_resource type="Script" path="res://scripts/actors/enemy_nav.gd" id="20_enemy_nav"]
+[ext_resource type="Script" path="res://scripts/actors/gang_turf.gd" id="21_turf"]
+[ext_resource type="PackedScene" path="res://scenes/actors/gang_member.tscn" id="22_gang"]
+[ext_resource type="Script" path="res://scripts/combat/police_dispatch.gd" id="23_police"]
+[ext_resource type="PackedScene" path="res://scenes/actors/police_drone.tscn" id="24_drone"]
 
 [node name="World" type="Node3D"]
 
@@ -140,6 +146,20 @@ npc_scene = ExtResource("11_npc")
 
 [node name="NavigationRegion3D" type="NavigationRegion3D" parent="Crowd"]
 
+[node name="EnemyNav" type="NavigationRegion3D" parent="."]
+script = ExtResource("20_enemy_nav")
+geometry_root = NodePath("..")
+
+[node name="JackalTurf" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -56, 0, 0)
+script = ExtResource("21_turf")
+member_scene = ExtResource("22_gang")
+nav = NodePath("../EnemyNav")
+
+[node name="PoliceDispatch" type="Node3D" parent="."]
+script = ExtResource("23_police")
+drone_scene = ExtResource("24_drone")
+
 [node name="ImpactEffects" type="Node3D" parent="."]
 script = ExtResource("12_impacts")
 
@@ -151,6 +171,9 @@ script = ExtResource("17_sfx")
 
 [node name="Explosions" type="Node3D" parent="."]
 script = ExtResource("18_explosions")
+
+[node name="ItemScatter" type="Node3D" parent="."]
+script = ExtResource("19_scatter")
 
 [node name="CityAmbience" type="AudioStreamPlayer" parent="."]
 stream = ExtResource("14_ambience")

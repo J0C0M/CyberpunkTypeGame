@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Script" path="res://scripts/items/item_data.gd" id="1_item"]
+
+[resource]
+script = ExtResource("1_item")
+id = &"sushi"
+display_name = "Sushi Set"
+category = &"food"
+price = 26
+pack = 1
+stack_size = 10
+description = "Eight pieces, mostly real fish."
+inspect_text = "Hiro swears the salmon swam once. The tuna is lab-grown and doesn't pretend otherwise."
+model = &"sushi"
+effect = &"steady"
+effect_strength = 0.25
+effect_duration = 90.0
+heal = 20.0
+use_verb = "Eat"
+effect_label = "STEADY HANDS"

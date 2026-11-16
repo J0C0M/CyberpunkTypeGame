@@ -1,0 +1,67 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/weapons/firearm.gd" id="1_gun"]
+[ext_resource type="Script" path="res://scripts/weapons/shotgun_model.gd" id="2_model"]
+[ext_resource type="AudioStream" path="res://assets/audio/shotgun_shot.wav" id="3_shot"]
+[ext_resource type="AudioStream" path="res://assets/audio/shell_insert.wav" id="4_reload"]
+[ext_resource type="AudioStream" path="res://assets/audio/rifle_dry_fire.wav" id="5_dry"]
+[ext_resource type="AudioStream" path="res://assets/audio/shotgun_pump.wav" id="6_pump"]
+
+[node name="Shotgun" type="Node3D"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.19, -0.2, -0.34)
+script = ExtResource("1_gun")
+item_id = &"weapon_shotgun"
+ammo_id = &"ammo_shells"
+hud_name = "ONI-12"
+fire_mode = "PUMP"
+automatic = false
+rounds_per_minute = 72.0
+magazine_size = 6
+reload_time = 0.55
+reload_per_round = true
+max_range = 70.0
+damage = 13.0
+pellets = 9
+base_spread = 0.4
+pellet_spread = 3.2
+spread_per_shot = 0.6
+max_spread = 1.8
+recoil_pitch = 4.5
+recoil_yaw = 1.0
+shot_alarm_radius = 45.0
+cycle_sound = ExtResource("6_pump")
+cycle_delay = 0.22
+
+[node name="Model" type="Node3D" parent="."]
+script = ExtResource("2_model")
+
+[node name="Muzzle" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.03, -0.75)
+
+[node name="FlashLight" type="OmniLight3D" parent="Muzzle"]
+light_color = Color(1, 0.7, 0.35, 1)
+light_energy = 6.0
+omni_range = 9.0
+
+[node name="FillLight" type="OmniLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.12, 0.3, 0.2)
+light_color = Color(0.75, 0.8, 1, 1)
+light_energy = 1.0
+light_cull_mask = 2
+omni_range = 1.6
+
+[node name="ShotSound" type="AudioStreamPlayer" parent="."]
+stream = ExtResource("3_shot")
+volume_db = -4.0
+max_polyphony = 2
+bus = &"SFX"
+
+[node name="ReloadSound" type="AudioStreamPlayer" parent="."]
+stream = ExtResource("4_reload")
+volume_db = -5.0
+bus = &"SFX"
+
+[node name="DryFireSound" type="AudioStreamPlayer" parent="."]
+stream = ExtResource("5_dry")
+volume_db = -6.0
+bus = &"SFX"

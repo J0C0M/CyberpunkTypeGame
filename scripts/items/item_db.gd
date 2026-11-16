@@ -1,9 +1,12 @@
 class_name ItemDB
 extends RefCounted
-## Every item in the game. Prices are base prices in credits (¢) per unit; merchants add their
-## markup when selling and pay less when buying. Ammo is counted in rounds but traded in packs.
+## Every item in the game: one ItemData resource per item in res://assets/items/ (file name = item
+## id). Loaded on first use. The static helpers below are what the inventory, shops, loot and UI use.
+
+const FOLDER := "res://assets/items/"
 
 const CATEGORY_COLORS := {
+	&"weapon": Color(1.0, 0.16, 0.62),
 	&"ammo": Color(1.0, 0.58, 0.12),
 	&"food": Color(1.0, 0.35, 0.3),
 	&"drink": Color(0.1, 0.88, 1.0),
@@ -11,56 +14,102 @@ const CATEGORY_COLORS := {
 	&"junk": Color(0.6, 0.6, 0.65),
 	&"valuable": Color(1.0, 0.85, 0.2),
 	&"cyberware": Color(0.62, 0.28, 1.0),
+	&"key": Color(0.75, 0.88, 1.0),
+}
+## Sort order in lists and the inventory grid.
+const CATEGORY_ORDER: Array[StringName] = [&"weapon", &"ammo", &"medical", &"food", &"drink", &"junk", &"valuable", &"cyberware", &"key"]
+const CATEGORY_NAMES := {
+	&"weapon": "Weapon", &"ammo": "Ammo", &"food": "Food", &"drink": "Drink", &"medical": "Medical",
+	&"junk": "Junk", &"valuable": "Valuable", &"cyberware": "Cyberware", &"key": "Key item",
 }
 
-const ITEMS := {
-	&"ammo_ks47": {"name": "KS-47 rounds", "category": &"ammo", "price": 2, "pack": 30, "desc": "7.62 caseless, boxed in thirties."},
-	&"noodles": {"name": "Neon Ramen Bowl", "category": &"food", "price": 18, "desc": "Synth-pork broth. Glows faintly."},
-	&"sushi": {"name": "Sushi Set", "category": &"food", "price": 26, "desc": "Eight pieces, mostly real fish."},
-	&"onigiri": {"name": "Onigiri", "category": &"food", "price": 7, "desc": "Rice triangle, kelp filling."},
-	&"synth_soda": {"name": "Synth-Soda", "category": &"drink", "price": 6, "desc": "Tastes like blue."},
-	&"volt_can": {"name": "Volt Energy", "category": &"drink", "price": 9, "desc": "Legal in most districts."},
-	&"sake": {"name": "Cheap Sake", "category": &"drink", "price": 22, "desc": "Rice spirit from a vat in Ward 3."},
-	&"med_patch": {"name": "Med Patch", "category": &"medical", "price": 40, "desc": "Stick on, bleed less."},
-	&"focus_stim": {"name": "Focus Stim", "category": &"medical", "price": 75, "desc": "Sharp edges for one hour."},
-	&"scrap": {"name": "Scrap Metal", "category": &"junk", "price": 4, "desc": "Somebody will melt it down."},
-	&"burnt_chip": {"name": "Burnt Chip", "category": &"junk", "price": 12, "desc": "The gold traces are still worth something."},
-	&"data_shard": {"name": "Data Shard", "category": &"junk", "price": 35, "desc": "Encrypted. Brokers pay for the maybe."},
-	&"deck_board": {"name": "Cracked Deck Board", "category": &"junk", "price": 60, "desc": "Cyberdeck mainboard, one crack too many."},
-	&"lucky_cat": {"name": "Lucky Cat Charm", "category": &"valuable", "price": 45, "desc": "Waves at you. Probably lucky."},
-	&"vinyl": {"name": "Pre-Collapse Vinyl", "category": &"valuable", "price": 95, "desc": "Nobody owns a player. Everybody wants one."},
-	&"gold_lighter": {"name": "Gold-Plated Lighter", "category": &"valuable", "price": 110, "desc": "Engraved initials, not yours."},
-	&"jade_koi": {"name": "Jade Koi Figurine", "category": &"valuable", "price": 180, "desc": "Old, green, heavy."},
-	&"optic_lens": {"name": "Optic Lens Mk.II", "category": &"cyberware", "price": 220, "desc": "Low-light zoom. Fits most sockets."},
-	&"neural_implant": {"name": "Used Neural Implant", "category": &"cyberware", "price": 260, "desc": "Previous owner's settings included."},
-	&"reflex_wire": {"name": "Reflex Wire Kit", "category": &"cyberware", "price": 340, "desc": "Faster hands. Twitchier nights."},
-}
+static var _items := {}
+
+
+## The ItemData for `id`, or null if there is no such item.
+static func item(id: StringName) -> ItemData:
+	_load_all()
+	return _items.get(id)
+
+
+static func all_ids() -> Array[StringName]:
+	_load_all()
+	var result: Array[StringName] = []
+	result.assign(_items.keys())
+	return result
 
 
 static func has(id: StringName) -> bool:
-	return ITEMS.has(id)
+	return item(id) != null
 
 
 static func display_name(id: StringName) -> String:
-	return ITEMS[id]["name"] if ITEMS.has(id) else String(id)
+	var data := item(id)
+	return data.display_name if data else String(id)
 
 
 static func category(id: StringName) -> StringName:
-	return ITEMS[id]["category"] if ITEMS.has(id) else &"junk"
+	var data := item(id)
+	return data.category if data else &"junk"
+
+
+static func category_name(id: StringName) -> String:
+	return CATEGORY_NAMES.get(category(id), "Item")
 
 
 static func base_price(id: StringName) -> int:
-	return ITEMS[id]["price"] if ITEMS.has(id) else 1
+	var data := item(id)
+	return data.price if data else 1
 
 
 ## How many units change hands per trade (30 rounds of ammo, otherwise 1).
 static func pack_size(id: StringName) -> int:
-	return ITEMS[id].get("pack", 1) if ITEMS.has(id) else 1
+	var data := item(id)
+	return data.pack if data else 1
+
+
+static func stack_size(id: StringName) -> int:
+	var data := item(id)
+	return maxi(1, data.stack_size) if data else 1
 
 
 static func description(id: StringName) -> String:
-	return ITEMS[id]["desc"] if ITEMS.has(id) else ""
+	var data := item(id)
+	return data.description if data else ""
 
 
+## Category colour, used for list text, icon frames and pickup glow.
 static func color(id: StringName) -> Color:
 	return CATEGORY_COLORS.get(category(id), Color.WHITE)
+
+
+## The item's own accent colour (falls back to the category colour).
+static func tint(id: StringName) -> Color:
+	var data := item(id)
+	return data.tint if data and data.tint != Color.BLACK else color(id)
+
+
+static func is_sellable(id: StringName) -> bool:
+	var data := item(id)
+	return data != null and data.sellable
+
+
+## Sorts by category, then name.
+static func sorts_before(a: StringName, b: StringName) -> bool:
+	var ca := CATEGORY_ORDER.find(category(a))
+	var cb := CATEGORY_ORDER.find(category(b))
+	if ca != cb:
+		return ca < cb
+	return display_name(a) < display_name(b)
+
+
+static func _load_all() -> void:
+	if not _items.is_empty():
+		return
+	# list_directory also sees exported (remapped) resources.
+	for file in ResourceLoader.list_directory(FOLDER):
+		if not file.ends_with(".tres"):
+			continue
+		var data := load(FOLDER + file) as ItemData
+		if data and data.id != &"":
+			_items[data.id] = data

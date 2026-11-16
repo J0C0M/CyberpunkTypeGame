@@ -19,6 +19,8 @@ var _wait := 0.0
 var _phase := 0.0
 var _home := Vector3.ZERO
 var _reaction := Reaction.NONE
+## Seconds spent trying to walk without getting anywhere.
+var _stuck := 0.0
 
 
 func _ready() -> void:
@@ -72,6 +74,7 @@ func _on_velocity_computed(safe_velocity: Vector3) -> void:
 	velocity.y = 0.0 if is_on_floor() else velocity.y - _gravity * delta
 	move_and_slide()
 	var speed := Vector2(velocity.x, velocity.z).length()
+	_check_stuck(delta, speed)
 	if speed > 0.15:
 		rotation.y = lerp_angle(rotation.y, atan2(-velocity.x, -velocity.z), 1.0 - exp(-8.0 * delta))
 	_phase += delta * minf(speed, 3.0) * 4.4
@@ -79,7 +82,27 @@ func _on_velocity_computed(safe_velocity: Vector3) -> void:
 	model.pose(_phase, clampf(speed / walk_speed, 0.0, 1.0), run, cower_amount)
 
 
-func _on_danger_noticed(_origin: Vector3, severity: float, was_calm: bool) -> void:
+## Crowd avoidance can shove someone off the walkable band, where the way back is blocked by a
+## lamp post or a bin. Stuck for a moment: step back onto the navmesh and pick a fresh route.
+func _check_stuck(delta: float, speed: float) -> void:
+	if agent.velocity.length() > 0.5 and speed < 0.15:
+		_stuck += delta
+	else:
+		_stuck = 0.0
+	if _stuck < 1.2:
+		return
+	_stuck = 0.0
+	var map := agent.get_navigation_map()
+	var on_mesh := NavigationServer3D.map_get_closest_point(map, global_position)
+	if on_mesh.distance_to(global_position) < 2.0:
+		global_position = on_mesh + Vector3.UP * 0.05
+	if _reaction == Reaction.FLEE:
+		_pick_flee_target()
+	else:
+		_pick_target()
+
+
+func _on_danger_noticed(_origin: Vector3, severity: float, was_calm: bool, _source: Node) -> void:
 	if was_calm:
 		var cower_chance := 0.5 if loiter else 0.3
 		if severity >= EventBus.SEVERITY_EXPLOSION:

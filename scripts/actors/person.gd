@@ -96,30 +96,31 @@ func _on_damaged(hit: HitInfo) -> void:
 ## Called on every hit while alive (after effects). Being shot is as alarming as a death.
 func _on_hurt(hit: HitInfo) -> void:
 	var origin := (hit.source as Node3D).global_position if hit.source is Node3D else hit.position
-	_alarm(origin, EventBus.SEVERITY_DEATH, 1.0)
+	_alarm(origin, EventBus.SEVERITY_DEATH, 1.0, hit.source)
 
 
 func is_panicking() -> bool:
 	return panic_time > 0.0
 
 
-func _on_danger(position: Vector3, radius: float, severity: float, _source: Node) -> void:
-	if is_dead:
+func _on_danger(position: Vector3, radius: float, severity: float, source: Node) -> void:
+	if is_dead or source == self:
 		return
 	var distance := global_position.distance_to(position)
 	if distance <= radius:
-		_alarm(position, severity, 1.0 - distance / radius)
+		_alarm(position, severity, 1.0 - distance / radius, source)
 
 
-func _alarm(origin: Vector3, severity: float, closeness: float) -> void:
+func _alarm(origin: Vector3, severity: float, closeness: float, source: Node = null) -> void:
 	var was_calm := panic_time <= 0.0
 	panic_time = maxf(panic_time, (3.0 + 6.0 * severity) * (0.7 + 0.6 * closeness))
 	panic_origin = origin
-	_on_danger_noticed(origin, severity, was_calm)
+	_on_danger_noticed(origin, severity, was_calm, source)
 
 
-## A danger event reached this person (they are now panicking). Subclasses pick a reaction.
-func _on_danger_noticed(_origin: Vector3, _severity: float, _was_calm: bool) -> void:
+## A danger event reached this person (they are now panicking). `source` is whoever caused it
+## (the player, a gang member...), or null. Subclasses pick a reaction.
+func _on_danger_noticed(_origin: Vector3, _severity: float, _was_calm: bool, _source: Node) -> void:
 	pass
 
 

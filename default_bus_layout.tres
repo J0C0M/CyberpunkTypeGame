@@ -1,4 +1,4 @@
-[gd_resource type="AudioBusLayout" format=3]
+[gd_resource type="AudioBusLayout" format=3 uid="uid://dftueqkg1m1ou"]
 
 [sub_resource type="AudioEffectLowPassFilter" id="AudioEffectLowPassFilter_music"]
 resource_name = "MuffleLowPass"

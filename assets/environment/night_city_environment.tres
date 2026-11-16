@@ -1,9 +1,18 @@
-[gd_resource type="Environment" format=3]
+[gd_resource type="Environment" format=3 uid="uid://dd0t8ymuihnro"]
 
-[ext_resource type="Shader" path="res://shaders/night_sky.gdshader" id="1_sky"]
+[ext_resource type="Shader" uid="uid://dubqyfwdvu8ys" path="res://shaders/night_sky.gdshader" id="1_sky"]
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_sky"]
 shader = ExtResource("1_sky")
+shader_parameter/zenith_color = Color(0.006, 0.006, 0.02, 1)
+shader_parameter/horizon_color = Color(0.13, 0.05, 0.17, 1)
+shader_parameter/city_glow_color = Color(0.75, 0.18, 0.5, 1)
+shader_parameter/city_glow_strength = 0.35
+shader_parameter/city_glow_falloff = 9.0
+shader_parameter/cloud_color = Color(0.22, 0.09, 0.27, 1)
+shader_parameter/cloud_coverage = 0.6
+shader_parameter/cloud_speed = 0.006
+shader_parameter/star_amount = 0.2
 
 [sub_resource type="Sky" id="Sky_night"]
 sky_material = SubResource("ShaderMaterial_sky")
@@ -21,8 +30,6 @@ tonemap_exposure = 1.05
 tonemap_white = 6.0
 ssr_enabled = true
 ssr_max_steps = 48
-ssr_fade_in = 0.15
-ssr_fade_out = 2.0
 ssr_depth_tolerance = 0.4
 glow_enabled = true
 glow_intensity = 0.75

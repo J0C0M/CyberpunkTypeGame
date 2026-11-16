@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Script" path="res://scripts/items/item_data.gd" id="1_item"]
+
+[resource]
+script = ExtResource("1_item")
+id = &"onigiri"
+display_name = "Onigiri"
+category = &"food"
+price = 7
+pack = 1
+stack_size = 10
+description = "Rice triangle, kelp filling."
+inspect_text = "Wrapped in a film that peels off in three numbered steps. Nobody gets it right the first time."
+model = &"onigiri"
+heal = 10.0
+use_verb = "Eat"

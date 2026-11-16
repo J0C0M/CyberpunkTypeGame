@@ -14,6 +14,8 @@ signal died(hit: HitInfo)
 		health = value
 ## Still reports hits (so the owner can react) but never loses health.
 @export var invulnerable := false
+## Scales explosion damage (the player takes less, armoured drones more...).
+@export var explosion_multiplier := 1.0
 
 var health := 100.0
 var is_dead := false
@@ -22,6 +24,8 @@ var is_dead := false
 func apply_damage(hit: HitInfo) -> void:
 	if is_dead:
 		return
+	if hit.kind == HitInfo.Kind.EXPLOSION:
+		hit.damage *= explosion_multiplier
 	if not invulnerable:
 		health = maxf(0.0, health - hit.damage)
 	damaged.emit(hit)

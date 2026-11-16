@@ -469,6 +469,160 @@ def tv_static(rng):
     return normalize(crossfade_loop(bandpass(noise(n, rng), 400, 6000), 0.3), 0.35)
 
 
+def eat(rng):
+    """Three soft crunchy bites."""
+    total = 0.75
+    bites = []
+    for k in range(3):
+        n = seconds(0.12)
+        crunch = [v * e for v, e in zip(bandpass(noise(n, rng), 900, 4500), envelope(n, 0.004, 0.03))]
+        bites.append(place(crunch, 0.05 + k * 0.22 + rng.uniform(-0.02, 0.02), total))
+    return normalize(mix(*bites), 0.5)
+
+
+def drink(rng):
+    """A can hiss, then two gulps."""
+    total = 0.9
+    n = seconds(0.25)
+    fizz = [v * e * 0.5 for v, e in zip(highpass(noise(n, rng), 3500), envelope(n, 0.002, 0.08))]
+    gulps = []
+    for k in range(2):
+        g = seconds(0.14)
+        phase, out = 0.0, []
+        for i in range(g):
+            t = i / SAMPLE_RATE
+            freq = 180.0 + 220.0 * t / 0.14
+            phase += 2 * math.pi * freq / SAMPLE_RATE
+            out.append(math.sin(phase) * math.sin(math.pi * i / g) ** 2)
+        gulps.append(place(lowpass(out, 900), 0.3 + k * 0.25, total))
+    return normalize(mix(place(fizz, 0.0, total), *gulps), 0.5)
+
+
+def med_patch(rng):
+    """Backing paper tearing, then a short pneumatic hiss."""
+    total = 0.6
+    n = seconds(0.18)
+    tear = [v * (0.5 + 0.5 * math.sin(i * 0.37)) * math.sin(math.pi * i / n) for i, v in enumerate(bandpass(noise(n, rng), 1500, 6000))]
+    h = seconds(0.3)
+    hiss = [v * e for v, e in zip(highpass(noise(h, rng), 2500), envelope(h, 0.01, 0.12))]
+    return normalize(mix(place(tear, 0.0, total), place(hiss, 0.25, total)), 0.45)
+
+
+def weapon_switch(rng):
+    return normalize(mix(place(click(rng, 1500, 0.07, 0.015), 0.0, 0.3), place(click(rng, 2800, 0.06, 0.008), 0.14, 0.3)), 0.5)
+
+
+def item_drop(rng):
+    n = seconds(0.3)
+    thud = [v * e for v, e in zip(lowpass(noise(n, rng), 500), envelope(n, 0.002, 0.05))]
+    return normalize(mix(thud, place(click(rng, 1800, 0.05, 0.01), 0.02, 0.3)), 0.5)
+
+
+def player_hurt(rng):
+    """A dull body thump with a short breath of noise (no voice)."""
+    n = seconds(0.35)
+    thump = []
+    phase = 0.0
+    for i in range(n):
+        t = i / SAMPLE_RATE
+        freq = 70.0 + 90.0 * math.exp(-t * 25.0)
+        phase += 2 * math.pi * freq / SAMPLE_RATE
+        thump.append(math.sin(phase) * math.exp(-t / 0.06))
+    breath = [v * e * 0.35 for v, e in zip(bandpass(noise(n, rng), 400, 1800), envelope(n, 0.02, 0.09))]
+    return normalize(mix(thump, breath), 0.6)
+
+
+def flatline(rng):
+    """Two heartbeat blips, then the long monitor tone."""
+    total = 2.6
+    blips = [place(ui_blip(rng, 1000, 0.12), k * 0.45, total) for k in range(2)]
+    n = seconds(1.6)
+    tone = [math.sin(2 * math.pi * 1000 * i / SAMPLE_RATE) * 0.25 * min(1.0, (n - i) / seconds(0.3)) for i in range(n)]
+    return normalize(mix(*blips, place(tone, 0.95, total)), 0.4)
+
+
+def gun_shot(rng, crack_cut, body_cut, body_decay, thump_freq, tail):
+    n = seconds(0.5)
+    crack = [s * e for s, e in zip(highpass(noise(n, rng), crack_cut), envelope(n, 0.0005, 0.01))]
+    body = [s * e * 1.3 for s, e in zip(lowpass(noise(n, rng), body_cut), envelope(n, 0.001, body_decay))]
+    thump, phase = [], 0.0
+    for i in range(n):
+        t = i / SAMPLE_RATE
+        freq = thump_freq + 120.0 * math.exp(-t * 35.0)
+        phase += 2 * math.pi * freq / SAMPLE_RATE
+        thump.append(math.sin(phase) * math.exp(-t / 0.05))
+    echo = [s * e * tail for s, e in zip(lowpass(noise(n, rng), 800), envelope(n, 0.03, 0.18))]
+    return normalize(soft_clip(mix(crack, body, thump, echo), 1.8))
+
+
+def pistol_shot(rng):
+    return gun_shot(rng, 1800, 2600, 0.04, 70.0, 0.25)
+
+
+def shotgun_shot(rng):
+    n = seconds(0.9)
+    blast = gun_shot(rng, 900, 1400, 0.12, 40.0, 0.5)
+    rumble = [s * e * 0.6 for s, e in zip(lowpass(noise(n, rng), 300), envelope(n, 0.005, 0.25))]
+    return normalize(soft_clip(mix(blast, rumble), 1.5))
+
+
+def shotgun_pump(rng):
+    back = mix(click(rng, 900, 0.1, 0.02), place(lowpass(noise(seconds(0.08), rng), 2000), 0.01, 0.1))
+    forward = mix(click(rng, 1400, 0.1, 0.015), place(click(rng, 2600, 0.06, 0.008), 0.05, 0.12))
+    return normalize(mix(place(back, 0.0, 0.45), place(forward, 0.22, 0.45)), 0.6)
+
+
+def shell_insert(rng):
+    return normalize(mix(click(rng, 2100, 0.08, 0.012), place(click(rng, 1300, 0.08, 0.02), 0.04, 0.15)), 0.5)
+
+
+def pistol_reload(rng):
+    total = 1.3
+    out_ = click(rng, 1700, 0.08, 0.012)
+    in_ = mix(click(rng, 2500, 0.06, 0.01), place(click(rng, 3100, 0.06, 0.006), 0.04, 0.1))
+    slide = click(rng, 3400, 0.07, 0.01)
+    return normalize(mix(place(out_, 0.1, total), place(in_, 0.6, total), place(slide, 1.05, total)), 0.7)
+
+
+def drone_hum(rng):
+    """Loopable rotor whine for police drones."""
+    length = 2.0
+    n = seconds(length)
+    out = []
+    for i in range(n):
+        t = i / SAMPLE_RATE
+        wob = 1.0 + 0.03 * math.sin(2 * math.pi * 3.0 * t)
+        out.append(0.4 * math.sin(2 * math.pi * 180 * wob * t) + 0.25 * math.sin(2 * math.pi * 361 * t) + 0.1 * math.sin(2 * math.pi * 723 * t))
+    hiss = [v * 0.25 for v in bandpass(noise(n, rng), 1500, 5000)]
+    return normalize(mix(out, hiss), 0.5)
+
+
+def drone_zap(rng):
+    """A short electric bolt (police taser rounds)."""
+    n = seconds(0.25)
+    out, phase = [], 0.0
+    for i in range(n):
+        t = i / SAMPLE_RATE
+        freq = 2400.0 * math.exp(-t * 14.0) + 300.0
+        phase += 2 * math.pi * freq / SAMPLE_RATE
+        out.append((1 if math.sin(phase) > 0 else -1) * math.exp(-t / 0.06))
+    crackle = [v * e * 0.6 for v, e in zip(highpass(noise(n, rng), 3000), envelope(n, 0.001, 0.03))]
+    return normalize(lowpass(mix(out, crackle), 7000), 0.55)
+
+
+def siren_whoop(rng):
+    """One rising police whoop."""
+    n = seconds(0.9)
+    out, phase = [], 0.0
+    for i in range(n):
+        t = i / SAMPLE_RATE
+        freq = 500.0 + 900.0 * (t / 0.9) ** 0.7
+        phase += 2 * math.pi * freq / SAMPLE_RATE
+        amp = min(1.0, t / 0.05) * min(1.0, (0.9 - t) / 0.15)
+        out.append((math.sin(phase) + 0.3 * math.sin(2 * phase)) * amp)
+    return normalize(lowpass(out, 4000), 0.4)
+
+
 def main():
     sounds = [
         ("rifle_shot.wav", rifle_shot),
@@ -496,6 +650,21 @@ def main():
         ("door_slide.wav", door_slide),
         ("elevator_ding.wav", elevator_ding),
         ("elevator_hum.wav", elevator_hum),
+        ("eat.wav", eat),
+        ("drink.wav", drink),
+        ("med_patch.wav", med_patch),
+        ("weapon_switch.wav", weapon_switch),
+        ("item_drop.wav", item_drop),
+        ("player_hurt.wav", player_hurt),
+        ("flatline.wav", flatline),
+        ("pistol_shot.wav", pistol_shot),
+        ("pistol_reload.wav", pistol_reload),
+        ("shotgun_shot.wav", shotgun_shot),
+        ("shotgun_pump.wav", shotgun_pump),
+        ("shell_insert.wav", shell_insert),
+        ("drone_hum.wav", drone_hum),
+        ("drone_zap.wav", drone_zap),
+        ("siren_whoop.wav", siren_whoop),
         ("tv/news.wav", tv_news),
         ("tv/advert.wav", tv_advert),
         ("tv/anime.wav", tv_anime),

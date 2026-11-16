@@ -91,7 +91,7 @@ func _show_node(id: StringName) -> void:
 		_choices.remove_child(child)
 		child.queue_free()
 	var index := 0
-	for choice in _node.get("choices", []):
+	for choice in _visible_choices():
 		var button := Button.new()
 		button.text = "%d. %s" % [index + 1, choice["text"]]
 		button.alignment = HORIZONTAL_ALIGNMENT_LEFT
@@ -101,8 +101,17 @@ func _show_node(id: StringName) -> void:
 		index += 1
 
 
+## The current node's choices whose "if" condition (if any) holds.
+func _visible_choices() -> Array:
+	var result := []
+	for choice in _node.get("choices", []):
+		if not choice.has("if") or (_speaker and _speaker.has_method("dialogue_condition") and _speaker.dialogue_condition(choice["if"])):
+			result.append(choice)
+	return result
+
+
 func _pick(index: int) -> void:
-	var choices: Array = _node.get("choices", [])
+	var choices := _visible_choices()
 	if index >= choices.size():
 		return
 	_audio.play()

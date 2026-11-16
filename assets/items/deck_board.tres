@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Script" path="res://scripts/items/item_data.gd" id="1_item"]
+
+[resource]
+script = ExtResource("1_item")
+id = &"deck_board"
+display_name = "Cracked Deck Board"
+category = &"junk"
+price = 60
+pack = 1
+stack_size = 5
+description = "Cyberdeck mainboard, one crack too many."
+inspect_text = "A mainboard out of a runner's deck. The crack runs right through the ICE co-processor."
+model = &"board"

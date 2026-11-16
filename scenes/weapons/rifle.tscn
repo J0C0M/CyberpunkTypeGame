@@ -1,12 +1,13 @@
 [gd_scene format=3]
 
-[ext_resource type="Script" path="res://scripts/weapons/rifle.gd" id="1_rifle"]
+[ext_resource type="Script" path="res://scripts/weapons/firearm.gd" id="1_rifle"]
 [ext_resource type="Script" path="res://scripts/weapons/rifle_model.gd" id="2_model"]
 [ext_resource type="AudioStream" path="res://assets/audio/rifle_shot.wav" id="3_shot"]
 [ext_resource type="AudioStream" path="res://assets/audio/rifle_reload.wav" id="4_reload"]
 [ext_resource type="AudioStream" path="res://assets/audio/rifle_dry_fire.wav" id="5_dry"]
 
 [node name="Rifle" type="Node3D"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.19, -0.2, -0.36)
 script = ExtResource("1_rifle")
 
 [node name="Model" type="Node3D" parent="."]
