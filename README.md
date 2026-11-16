@@ -202,7 +202,7 @@ godot --headless --path . res://tests/test_inventory.tscn
 
 The tests are `test_inventory`, `test_save` (slots, characters, converting old saves),
 `test_health`, `test_weapons`, `test_gang`, `test_police`, `test_world` (doors, elevator, first-person
-body, mirrors), `test_crowd` (how often pedestrians get stuck), `test_character` (the player model) and
+body, mirrors), `test_bounds` (no way out of the streets and interiors), `test_crowd` (how often pedestrians get stuck), `test_character` (the player model) and
 `test_flow` (title screen -> creator -> game -> title screen -> continue). The `shot_*.tscn` scenes render screenshots instead (run them windowed with
 `-- --out=/tmp/prefix`), `perf_bench.tscn` prints frame times for an explosion and a firefight, and
 `test_quit.tscn` checks for a clean exit. Tests and screenshot runs never read or write your save.

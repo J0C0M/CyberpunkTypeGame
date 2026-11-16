@@ -21,6 +21,9 @@ const HALL_BACK_Z := -10.2
 const SHAFT_X := -5.25
 const CAB_HALF := 1.2
 const CAB_DEPTH := 2.4
+## How far back from the street the levels reach (just behind the elevator cab); the rest of the
+## lot is solid building.
+const BACK_DEPTH := -HALL_BACK_Z + CAB_DEPTH + 0.1
 ## The player's apartment: the street-side corner unit.
 const APARTMENT_X := 1.6
 ## The window at the hallway's east end: from/to along Z, and its sill and lintel above the floor.
@@ -196,17 +199,19 @@ func _build_lobby() -> void:
 	_build_doorbot(desk + Vector3(0.9, 0, 0))
 
 
-## The back wall of a level, with the elevator opening cut out of it.
+## The back wall of a level, with the elevator opening cut out of it. Either side of the shaft it
+## runs back to BACK_DEPTH, where the CityBuilder's solid back of the lot starts.
 func _back_wall(floor_y: float, height: float, wall: Material) -> void:
 	var half := _half()
 	var left := SHAFT_X - CAB_HALF
 	var right := SHAFT_X + CAB_HALF
 	var segments := [Vector2(-half, left), Vector2(right, half)]
+	var thickness := BACK_DEPTH + HALL_BACK_Z
 	for segment in segments:
 		var w: float = segment.y - segment.x
-		var center := Vector3((segment.x + segment.y) * 0.5, floor_y + height * 0.5, HALL_BACK_Z - 0.15)
-		_geo.add_box_at(Vector3(w, height, 0.3), center, wall)
-		BuildKit.box_collider_at(_body, Vector3(w, height, 0.3), center)
+		var center := Vector3((segment.x + segment.y) * 0.5, floor_y + height * 0.5, HALL_BACK_Z - thickness * 0.5)
+		_geo.add_box_at(Vector3(w, height, thickness), center, wall)
+		BuildKit.box_collider_at(_body, Vector3(w, height, thickness), center)
 	_geo.add_box_at(Vector3(CAB_HALF * 2.0, height - 2.4, 0.3), Vector3(SHAFT_X, floor_y + 2.4 + (height - 2.4) * 0.5, HALL_BACK_Z - 0.15), wall)
 
 
