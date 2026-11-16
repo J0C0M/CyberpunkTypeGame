@@ -14,6 +14,7 @@ var _panel: PanelContainer
 var _name: Label
 var _text: Label
 var _choices: VBoxContainer
+var _scroll: ScrollContainer
 var _typing := 0.0
 var _audio: AudioStreamPlayer
 
@@ -90,6 +91,7 @@ func _show_node(id: StringName) -> void:
 	for child in _choices.get_children():
 		_choices.remove_child(child)
 		child.queue_free()
+	_scroll.scroll_vertical = 0
 	var index := 0
 	for choice in _visible_choices():
 		var button := Button.new()
@@ -135,7 +137,7 @@ func _build() -> void:
 	_panel.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM)
 	_panel.offset_left = -500
 	_panel.offset_right = 500
-	_panel.offset_top = -330
+	_panel.offset_top = -420
 	_panel.offset_bottom = -30
 	var column := VBoxContainer.new()
 	column.add_theme_constant_override("separation", 8)
@@ -146,8 +148,14 @@ func _build() -> void:
 	_text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_text.custom_minimum_size = Vector2(0, 80)
 	column.add_child(_text)
+	# Long menus (Ren's has eight choices) scroll inside the box instead of running off the screen.
+	_scroll = ScrollContainer.new()
+	_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	column.add_child(_scroll)
 	_choices = VBoxContainer.new()
 	_choices.add_theme_constant_override("separation", 4)
-	column.add_child(_choices)
-	var hint := UiStyle.label("1-8 or click to answer   SPACE skip   ESC leave", 12, Color(0.55, 0.55, 0.65), Color.BLACK)
+	_choices.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_scroll.add_child(_choices)
+	var hint := UiStyle.label("1-8 or click to answer   WHEEL scroll   SPACE skip   ESC leave", 12, Color(0.55, 0.55, 0.65), Color.BLACK)
 	column.add_child(hint)
