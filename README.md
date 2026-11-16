@@ -28,59 +28,70 @@ The renderer is Forward+ (Vulkan). You spawn inside a sushi cafe; walk out onto 
 | Jump | Space |
 | Shoot (full auto) | Left mouse button |
 | Reload | R |
-| Free / capture the mouse | Esc (clicking the game also captures it) |
+| Interact (talk, trade, doors, elevator, bed, couch, pick up) | E |
+| Free / capture the mouse, leave menus | Esc (clicking the game also captures it) |
+| Change TV channel (while seated) | A / D |
+| Dialogue choices | 1-8 or click |
 | Toggle PS1 vertex wobble | F2 |
 | Toggle the retro filter (pixelation + dithering) | F3 |
 
-Walk into the green-lit **AMMO** crate just inside the cafe door to refill your reserve ammo.
+You start in the noodle bar. Talk to **Ren** behind the counter: Ren gives you some starting money,
+explains the block and can mark shops and your apartment on the HUD. Ammo is no longer free; buy
+it by the box at Iron Lotus Arms.
 
-## What's in prototype 1
+## What's in the game
 
-- **First-person controller**: walk, sprint (with FOV kick), jump, mouse look, head bob, footsteps.
-- **Sushi cafe spawn**: counter with a moving conveyor belt of sushi plates, stools, standing
-  tables, paper lanterns, a neon koi, menu boards, shop front with awning and neon signs.
-- **City block**: a crossroads of wet streets (puddles reflect the neon through SSR), sidewalks,
-  crosswalks, glowing lane markings, buildings with procedural lit windows, storefronts, neon and
-  vertical blade signs, holographic adverts, street lamps, traffic lights, vending machines, parked
-  cars, steam vents, cables with festival lights and overpasses. Police barricades with invisible
-  walls close the streets about 68 m from the crossing.
-- **Endless skyline**: about 900 instanced towers out to 2.5 km, arcologies, aviation lights,
-  billboards, flying-car traffic, searchlights and a silhouette backdrop, all fading into fog.
-- **Robot dragons**: five segmented mechanical serpents on looping flight paths. Two fly low
-  through the street canyons (with head lights and an engine hum), three circle higher up.
-- **NPCs**: about 44 low-poly pedestrians with random outfits (coats, hoods, neon visors, glowing
-  umbrellas) walking the sidewalks and crosswalks with `NavigationAgent3D` and local avoidance.
-  Shooting near them does nothing yet.
-- **Rifle**: an AK-style hitscan rifle with blooming spread, recoil, muzzle flash, tracers,
-  sparks, bullet-hole decals, 30-round magazine plus reserve, reloading and sound.
-- **HUD**: crosshair, ammo counter with bullet bar and reload progress, controls hint, messages.
+### Prototype 1
+- First-person controller with sprint, jump and head bob; retro low-res filter; an always-night
+  neon city block with wet streets, skyline, flying-car traffic and robot dragons; wandering NPCs;
+  the KS-47 hitscan rifle; HUD.
+
+### Prototype 2
+- **Damage system:** `Damageable` health components with hit zones (`HitInfo`, `Damageable.deliver`)
+  used by bullets and explosions. An `EventBus` autoload broadcasts danger events.
+- **Things react to gunfire:** shop windows, the cafe front and bus-stop panels shatter; NPCs have
+  health (headshots x3), collapse when killed, drop loot and panic (flee or cower) at shots, bodies
+  and explosions; street furniture (vending machines, bins, lamps, signs, barriers, crates,
+  planters) shows damage stages and breaks; parked cars smoke, burn and explode with chain
+  reactions, camera shake and knockback. Debris, decals and bodies are pooled and capped.
+- **Interaction, inventory and credits:** look at things and press E. Credits and an inventory
+  (ammo included) live in the `GameState` autoload; the HUD shows credits and the clock.
+- **Shops and bartering:** noodle bar, Koi Bar, Cyberware, Clinic 24H, Iron Lotus Arms (ammo),
+  Lucky Pawn and the sushi cafe, each with a merchant and their own stock. Pay the price or haggle
+  with the offer slider: merchants accept, counter or refuse, get annoyed by lowballs and remember
+  your reputation. They cower and refuse to trade after violence.
+- **Ren, the guide:** dialogue with choices, tips, shop explanations and HUD waypoints. Can't be killed.
+- **Footsteps:** per surface (concrete, wet puddles, metal, wood, tile), distance-timed and soft.
+- **Neo-Heights:** a lobby with a doorman robot, an elevator to the 11th floor, a hallway and the
+  player's apartment 1107. Sleep in the bed to skip six hours (the city repairs itself, merchants
+  restock, bodies and loot are cleared), sit on the couch to watch four invented TV channels, grab
+  a soda from the fridge.
 
 ## Project structure
 
 ```
-project.godot          Input map, physics layer names, rendering settings, ps1_wobble global
+project.godot          Input map, physics layers, autoloads (EventBus, GameState), shader globals
 scenes/
-  main.tscn            Root: low-res RetroScreen viewport containing the world, plus the HUD
-  world/world.tscn     Environment, city, skyline, cafe, dragons, crowd, player, effects, ambience
-  world/*.tscn         City, skyline and sushi cafe (each a builder script on a Node3D)
-  player/player.tscn   First-person controller with the rifle attached
-  weapons/rifle.tscn   Rifle logic, model, muzzle flash light and sounds
-  actors/              Robot dragon and NPC scenes
-  props/ammo_crate.tscn
+  main.tscn            Root: low-res RetroScreen viewport with the world, HUD, trade and dialogue screens
+  world/world.tscn     Environment, city, skyline, dragons, crowd, player, effect pools, ambience
+  world/*.tscn         City, skyline, sushi cafe and the Neo-Heights apartment block
+  shops/*.tscn         The six shops (ShopInterior + a Merchant)
+  actors/              Robot dragon, NPC and merchant scenes
+  player/, weapons/    First-person player and the KS-47
 scripts/
-  main.gd              Mouse capture and mouse look routing
-  core/                RetroScreen (pixelation/toggles), MatLib (material factory), Palette
-  world/               CityBuilder, Skyline, SushiCafe, FlightPath, GeoBatch, BuildKit
-  actors/              RobotDragon, Npc, NpcModel, NpcCrowd
-  weapons/             Rifle, RifleModel, ImpactEffects
-  props/               AmmoCrate
-  debug/               Screenshot helper for development
-shaders/               Retro post filter, PS1 surface/neon/glass, facades, wet street, sky,
-                       holo adverts, sky traffic, light beams, skyline backdrop
-assets/audio/          Generated sound effects (see tools/generate_sfx.py)
-assets/environment/    Night WorldEnvironment (sky, fog, volumetric fog, glow, SSR)
-ui/                    HUD, crosshair and ammo bar
-tools/generate_sfx.py  Regenerates the placeholder sounds (python3 tools/generate_sfx.py)
+  core/                EventBus and GameState autoloads, RetroScreen, MatLib, Palette, SfxPool
+  combat/              HitInfo, Damageable, GlassPane, BreakableProp, Car, Explosions, DebrisPool
+  actors/              Person (health, death, panic), Npc, NpcCrowd, Merchant, NpcModel, RobotDragon
+  interaction/         Interactable, Door
+  items/               ItemDB, Inventory, ShopCatalog, Pickup
+  dialogue/            GuideDialogue (Ren's dialogue tree)
+  world/               CityBuilder, Skyline, SushiCafe, ShopInterior, ApartmentBlock, FlightPath, ...
+  props/               TvSet
+  player/, weapons/    Player, Footsteps, Rifle, RifleModel, ImpactEffects
+shaders/               Retro filter, PS1 surfaces, facades, wet street, sky, TV channels, ...
+assets/audio/          Generated sounds (tools/generate_sfx.py)
+ui/                    HUD, waypoint marker, trade and dialogue screens, shared UiStyle
+tools/generate_sfx.py  Regenerates every sound (python3 tools/generate_sfx.py)
 ```
 
 ## How the world is built (and how to swap things out)
@@ -125,7 +136,8 @@ godot --headless --path . --quit-after 120
 
 ## Known limitations
 
-- No enemies, damage or NPC reactions yet; the dragons are ambient only.
+- No enemies or player health yet; the dragons are ambient only.
+- Credits and inventory are not saved between sessions yet.
 - Sounds are simple synthesised placeholders.
 - Text on signs uses Godot's default font plus your system fonts for Japanese characters. If no
   CJK font is installed, those signs show empty boxes.

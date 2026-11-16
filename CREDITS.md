@@ -6,14 +6,15 @@
 
 ## Assets
 
-No third-party asset packs are used in prototype 1. Everything is original to this project:
+No third-party asset packs are used. Everything is original to this project:
 
 | Asset | Source | License |
 | --- | --- | --- |
 | All 3D models (city, cafe, rifle, NPCs, dragons, props) | Generated from primitives by the scripts in `scripts/` | Project |
 | All textures (bullet holes, steam puffs) | Generated at runtime in code | Project |
 | Shaders | Written for this project (`shaders/`) | Project |
-| Sound effects (`assets/audio/*.wav`) | Synthesised by `tools/generate_sfx.py` | Project |
+| Sound effects, footsteps and TV audio (`assets/audio/**`) | Synthesised by `tools/generate_sfx.py` | Project |
+| TV channels, brands and shows (NEO-7 News, Vantalume, Mecha-Koi Strike!!) | Invented for this project | Project |
 | Icon (`icon.svg`) | Made for this project | Project |
 
 ## Fonts
