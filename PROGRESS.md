@@ -66,7 +66,11 @@ User's combat direction (asked at the start): **street gang + police drones**, *
     Flatline: fade, "FLATLINED", clinic bill 10 % (max 150 ¢), +2 h, wake up in 1107 (with key card,
     `GameState.places[&"respawn_home"]`) or at Ren's; calls groups "police" `clear_heat` and "enemies"
     `on_player_respawned`. Sleeping restores health. Test: `tests/test_health.tscn`.
-  - [ ] B2 Pistol + shotgun (items, models, sounds, shop stock), shared hitscan
+  - [x] B2 Pistol + shotgun: `scenes/weapons/pistol.tscn` (Kitsune P9, semi, 12 rounds, `ammo_9mm`) and
+    `shotgun.tscn` (Oni-12, pump, 9 pellets, 6 shells loaded one by one, `ammo_shells`), view models
+    `pistol_model.gd` / `shotgun_model.gd` (slide/pump animate on `Firearm.fired`). Item resources + icons +
+    pickup models; Iron Lotus Arms stocks both guns and both ammo types. Bullets for every gun go through
+    `Hitscan.shoot` (`scripts/combat/hitscan.gd`). Test: `tests/test_weapons.tscn`, shots: `tests/shot_weapons.tscn`.
   - [ ] B3 Street gang (navmesh with roads, cover, perception, states, turf, loot)
   - [ ] B4 Wanted level + police drones, merchant/Ren reactions
   - [ ] B5 Balance pass, docs

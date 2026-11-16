@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="ItemData" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/items/item_data.gd" id="1_item"]
+[ext_resource type="PackedScene" path="res://scenes/weapons/pistol.tscn" id="2_scene"]
+
+[resource]
+script = ExtResource("1_item")
+id = &"weapon_pistol"
+display_name = "Kitsune P9 Pistol"
+category = &"weapon"
+price = 380
+pack = 1
+stack_size = 1
+description = "Semi-auto sidearm. Twelve in the mag, light on the wrist."
+inspect_text = "A compact polymer pistol with a pink-lit slide and a fox stamped into the grip. Popular with couriers, bouncers and people who would rather not be noticed carrying."
+model = &"pistol"
+tint = Color(1, 0.16, 0.62, 1)
+ammo = &"ammo_9mm"
+weapon_scene = ExtResource("2_scene")

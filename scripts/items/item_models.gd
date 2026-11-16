@@ -146,6 +146,30 @@ static func _add_shape(geo: GeoBatch, shape: StringName, tint: Color) -> void:
 			geo.add_box(Vector3(0.03, 0.08, 0.03), Transform3D(Basis(Vector3.FORWARD, 0.3), Vector3(-0.1, 0.02, 0)), steel)
 			geo.add_box_at(Vector3(0.16, 0.006, 0.052), Vector3(0.27, 0.088, 0), MatLib.neon(Palette.CYAN, 3.0))
 			geo.add_box_at(Vector3(0.08, 0.035, 0.035), Vector3(0.0, 0.135, 0), steel)
+		&"pistol":
+			var steel := MatLib.surface(Color(0.2, 0.2, 0.22), 0.35, 0.7, 0.0)
+			var polymer := MatLib.surface(Color(0.1, 0.1, 0.11), 0.6, 0.0, 0.0)
+			geo.add_box_at(Vector3(0.19, 0.034, 0.034), Vector3(0, 0.12, 0), steel)
+			geo.add_box_at(Vector3(0.12, 0.006, 0.036), Vector3(0.0, 0.12, 0), MatLib.neon(tint, 3.0))
+			geo.add_box_at(Vector3(0.17, 0.028, 0.03), Vector3(0, 0.092, 0), polymer)
+			geo.add_box(Vector3(0.05, 0.11, 0.032), Transform3D(Basis(Vector3.FORWARD, 0.25), Vector3(0.07, 0.04, 0)), polymer)
+			geo.add_bar(Vector3(0.0, 0.07, 0), Vector3(0.05, 0.065, 0), 0.005, steel)
+		&"shotgun":
+			var steel := MatLib.surface(Color(0.2, 0.2, 0.22), 0.35, 0.7, 0.0)
+			var wood := MatLib.surface(Color(0.45, 0.22, 0.1), 0.5, 0.0, 0.0)
+			geo.add_box_at(Vector3(0.22, 0.07, 0.05), Vector3(0, 0.08, 0), steel)
+			geo.add_cylinder(0.016, 0.016, 0.56, 8, Transform3D(Basis(Vector3.FORWARD, PI * 0.5), Vector3(0.39, 0.1, 0)), steel)
+			geo.add_cylinder(0.0145, 0.0145, 0.36, 8, Transform3D(Basis(Vector3.FORWARD, PI * 0.5), Vector3(0.33, 0.066, 0)), MatLib.neon(tint, 2.2))
+			geo.add_box_at(Vector3(0.16, 0.045, 0.052), Vector3(0.36, 0.066, 0), MatLib.surface(Color(0.08, 0.08, 0.09), 0.6, 0.0, 0.0))
+			geo.add_box(Vector3(0.26, 0.065, 0.042), Transform3D(Basis(Vector3.FORWARD, -0.08), Vector3(-0.24, 0.07, 0)), wood)
+			geo.add_box(Vector3(0.05, 0.11, 0.035), Transform3D(Basis(Vector3.FORWARD, -0.35), Vector3(-0.07, 0.01, 0)), steel)
+		&"shells":
+			geo.add_box_at(Vector3(0.11, 0.035, 0.07), Vector3(0, 0.0175, 0), MatLib.surface(Color(0.15, 0.15, 0.17), 0.7, 0.0, 0.0))
+			geo.add_box_at(Vector3(0.112, 0.008, 0.072), Vector3(0, 0.03, 0), MatLib.neon(tint, 2.5))
+			for i in 4:
+				var lying := Transform3D(Basis(Vector3.FORWARD, PI * 0.5), Vector3(-0.03 + i * 0.022, 0.052, 0.0))
+				geo.add_cylinder(0.01, 0.01, 0.06, 8, lying, MatLib.surface(Color(0.75, 0.08, 0.1), 0.5, 0.0, 0.0))
+				geo.add_cylinder(0.0105, 0.0105, 0.012, 8, lying.translated_local(Vector3(0, 0.03, 0)), MatLib.surface(Color(0.85, 0.6, 0.2), 0.3, 0.9, 0.0))
 		&"keycard":
 			geo.add_box_at(Vector3(0.086, 0.004, 0.054), Vector3(0, 0.002, 0), MatLib.surface(tint.darkened(0.3), 0.4, 0.2, 0.0))
 			geo.add_box_at(Vector3(0.086, 0.002, 0.01), Vector3(0, 0.0045, 0.015), MatLib.neon(tint, 3.0))

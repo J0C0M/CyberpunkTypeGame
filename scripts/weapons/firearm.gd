@@ -10,6 +10,8 @@ extends Node3D
 signal ammo_changed(in_magazine: int, reserve: int)
 signal reload_started(duration: float)
 signal reload_finished
+## A shot went off (view models animate their slide or pump on it).
+signal fired
 
 ## The inventory item that is this gun, and the ammo item it loads.
 @export var item_id := &"weapon_ks47"
@@ -38,6 +40,9 @@ signal reload_finished
 @export var recoil_yaw := 0.5
 ## How far the bang of a shot alarms people, in metres.
 @export var shot_alarm_radius := 35.0
+## Optional sound a moment after each shot (racking a pump).
+@export var cycle_sound: AudioStream
+@export var cycle_delay := 0.3
 
 ## World, NPCs, props and hit zones (physics layers 1, 3, 4 and 5).
 const HIT_MASK := 1 | 4 | 8 | 16
@@ -82,6 +87,7 @@ var _bob := 0.0
 var _drift := 0.0
 var _flash: MeshInstance3D
 var _tracers: Array[MeshInstance3D] = []
+var _cycle_player: AudioStreamPlayer
 
 
 func _ready() -> void:
@@ -95,6 +101,12 @@ func _ready() -> void:
 	for i in pellets:
 		_tracers.append(_build_tracer())
 	flash_light.visible = false
+	if cycle_sound:
+		_cycle_player = AudioStreamPlayer.new()
+		_cycle_player.stream = cycle_sound
+		_cycle_player.bus = &"SFX"
+		_cycle_player.volume_db = -5.0
+		add_child(_cycle_player)
 	GameState.inventory.changed.connect(_on_inventory_changed)
 	# Deferred so listeners that connect in their own _ready still get the starting values (read
 	# when the call runs, not now, so a change in between isn't overwritten by stale numbers).
@@ -190,11 +202,16 @@ func fire() -> void:
 	var camera := get_viewport().get_camera_3d()
 	var origin := camera.global_position
 	var spread := deg_to_rad((base_spread + _bloom) * _steadiness())
+	var exclude: Array[RID] = []
+	if _player:
+		exclude.append(_player.get_rid())
 	for i in pellets:
-		var direction := _spread_direction(camera.global_basis, spread + deg_to_rad(pellet_spread))
-		var end := _shoot_ray(origin, direction)
-		_show_tracer(_tracers[i], muzzle.global_position, end)
+		var direction := Hitscan.spread_direction(-camera.global_basis.z, spread + deg_to_rad(pellet_spread))
+		var shot := Hitscan.shoot(self, origin, direction, max_range, damage, _player, HIT_MASK, exclude)
+		_show_tracer(_tracers[i], muzzle.global_position, shot["end"])
 	EventBus.emit_danger(origin, shot_alarm_radius, EventBus.SEVERITY_SHOT, _player)
+	if cycle_sound:
+		get_tree().create_timer(cycle_delay).timeout.connect(_play_cycle)
 
 	_flash_time = 0.045
 	_flash.visible = true
@@ -209,34 +226,12 @@ func fire() -> void:
 	shot_sound.pitch_scale = randf_range(0.94, 1.06)
 	shot_sound.play()
 	ammo_changed.emit(ammo_in_magazine, reserve_ammo)
+	fired.emit()
 
 
-## One bullet: damage, impact effects and alarm where it lands. Returns where it ended.
-func _shoot_ray(origin: Vector3, direction: Vector3) -> Vector3:
-	var end := origin + direction * max_range
-	var query := PhysicsRayQueryParameters3D.create(origin, end, HIT_MASK)
-	query.collide_with_areas = true
-	if _player:
-		query.exclude = [_player.get_rid()]
-	var hit := get_world_3d().direct_space_state.intersect_ray(query)
-	if hit.is_empty():
-		return end
-	end = hit["position"]
-	var collider: Object = hit["collider"]
-	var target := Damageable.deliver(collider, HitInfo.create(damage, end, hit["normal"], direction, _player, HitInfo.Kind.BULLET, 3.0))
-	var effects := get_tree().get_first_node_in_group("impact_effects") as ImpactEffects
-	if effects and target == null:
-		# Bullet holes only on the static world; anything with health shows its own reaction.
-		effects.spawn_impact(end, hit["normal"], collider is StaticBody3D)
-	EventBus.emit_danger(end, 9.0, EventBus.SEVERITY_IMPACT, _player)
-	return end
-
-
-func _spread_direction(basis: Basis, spread: float) -> Vector3:
-	var angle := spread * sqrt(randf())
-	var around := randf() * TAU
-	var offset := (basis.x * cos(around) + basis.y * sin(around)) * tan(angle)
-	return (-basis.z + offset).normalized()
+func _play_cycle() -> void:
+	if is_inside_tree() and visible:
+		_cycle_player.play()
 
 
 func _update_effects(delta: float) -> void:

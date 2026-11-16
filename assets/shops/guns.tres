@@ -4,7 +4,7 @@
 
 [resource]
 script = ExtResource("1_shop")
-stock = Dictionary[StringName, int]({&"ammo_ks47": 900})
+stock = Dictionary[StringName, int]({&"ammo_ks47": 900, &"ammo_9mm": 480, &"ammo_shells": 160, &"weapon_pistol": 2, &"weapon_shotgun": 1})
 credits = 1000
 likes = Array[StringName]([&"ammo", &"weapon", &"cyberware"])
 markup = 1.2
