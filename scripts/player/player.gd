@@ -119,6 +119,9 @@ func _update_interaction() -> void:
 
 
 func _update_camera_effects(delta: float) -> void:
+	# A seat (couch) has taken the camera over.
+	if camera.top_level:
+		return
 	# The bob follows the footstep phase (one dip per step), so steps and bob line up.
 	var speed := Vector2(velocity.x, velocity.z).length() if is_on_floor() else 0.0
 	_bob_strength = lerpf(_bob_strength, clampf(speed / walk_speed, 0.0, 1.5) * bob_amount, 1.0 - exp(-8.0 * delta))

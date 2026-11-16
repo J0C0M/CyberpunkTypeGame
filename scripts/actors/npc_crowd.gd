@@ -18,7 +18,21 @@ var _spawned := 0
 @onready var region: NavigationRegion3D = $NavigationRegion3D
 
 
+## After a night's sleep the bodies are gone (replaced by new pedestrians) and nobody is scared.
+func clear_for_new_night() -> void:
+	for child in get_children():
+		var person := child as Npc
+		if person == null:
+			continue
+		if person.is_dead:
+			person._despawn()
+		elif person.is_panicking():
+			person.panic_time = 0.0
+			person._on_calmed()
+
+
 func _ready() -> void:
+	add_to_group("night_cleanup")
 	var builder := get_node(city) as CityBuilder
 	var navmesh := NavigationMesh.new()
 	navmesh.agent_radius = 0.5

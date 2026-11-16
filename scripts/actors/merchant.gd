@@ -42,6 +42,7 @@ var _patience_regen := 0.0
 func _ready() -> void:
 	killable = not is_guide
 	model.look_seed = look_seed
+	add_to_group("merchants")
 	super()
 	_home = transform
 	_interact = Interactable.create(self, Vector3(1.6, 1.1, 2.0), Vector3(0, 1.5, -0.9), "")

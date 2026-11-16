@@ -174,7 +174,8 @@ func _build_texts(root: Control) -> void:
 	root.add_child(_hint)
 	_hint.position = Vector2(28, 22)
 
-	var location := _label("NEO-KABUKICHO  //  BLOCK 7  //  23:47", 14, Palette.PINK, Palette.PINK.darkened(0.7))
+	var location := _label("NEO-KABUKICHO  //  BLOCK 7  //  " + GameState.clock_text(), 14, Palette.PINK, Palette.PINK.darkened(0.7))
+	GameState.clock_changed.connect(func(text: String) -> void: location.text = "NEO-KABUKICHO  //  BLOCK 7  //  " + text)
 	root.add_child(location)
 	location.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
 	location.offset_left = -420

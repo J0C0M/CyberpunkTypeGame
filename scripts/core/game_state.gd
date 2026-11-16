@@ -4,6 +4,13 @@ extends Node
 
 signal credits_changed(credits: int)
 signal waypoint_changed
+signal clock_changed(text: String)
+## The player slept: time skipped ahead and the city was tidied up for a new night.
+signal night_passed
+
+## Game minutes per real second (one minute every four seconds). It is always night outside;
+## the clock is just for flavour, sleeping and saving.
+const CLOCK_RATE := 0.25
 
 const STARTING_AMMO := 60
 
@@ -19,6 +26,8 @@ var places := {}
 var waypoint := {}
 ## Story flags ("met_guide"...).
 var flags := {}
+## Minutes since midnight.
+var clock_minutes := 23.0 * 60.0 + 47.0
 
 ## Empty while the player walks around; otherwise the name of whatever has taken over input
 ## ("trade", "dialogue", "seated"...). Main stops toggling the mouse and the player stops
@@ -28,6 +37,29 @@ var ui_mode := &""
 
 func _ready() -> void:
 	inventory.add(&"ammo_ks47", STARTING_AMMO)
+
+
+func _process(delta: float) -> void:
+	var before := int(clock_minutes)
+	clock_minutes = fposmod(clock_minutes + delta * CLOCK_RATE, 1440.0)
+	if int(clock_minutes) != before:
+		clock_changed.emit(clock_text())
+
+
+func clock_text() -> String:
+	return "%02d:%02d" % [int(clock_minutes) / 60, int(clock_minutes) % 60]
+
+
+## Sleeping: the clock jumps ahead and the city resets for a new night. Glass, props and cars are
+## repaired ("resettable"), merchants come back and restock ("merchants"), bodies, loot, debris and
+## bullet holes are cleared ("night_cleanup").
+func pass_night(hours := 6.0) -> void:
+	clock_minutes = fposmod(clock_minutes + hours * 60.0, 1440.0)
+	clock_changed.emit(clock_text())
+	get_tree().call_group("resettable", "reset")
+	get_tree().call_group("merchants", "revive")
+	get_tree().call_group("night_cleanup", "clear_for_new_night")
+	night_passed.emit()
 
 
 func add_credits(amount: int) -> void:
