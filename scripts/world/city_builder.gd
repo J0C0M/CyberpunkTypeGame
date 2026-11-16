@@ -30,8 +30,9 @@ const INTERIOR_LOTS := [
 	{"frontage": 0, "from": 9.0, "to": 18.0, "scene": "res://scenes/shops/noodle_shop.tscn", "height": 34.0},
 	{"frontage": 0, "from": 18.0, "to": 30.0, "scene": "res://scenes/world/sushi_cafe.tscn", "height": 42.0},
 	{"frontage": 1, "from": -38.0, "to": -26.0, "scene": "res://scenes/shops/cyberware_shop.tscn"},
+	{"frontage": 1, "from": -26.0, "to": -9.0, "scene": "res://scenes/world/apartment_block.tscn", "height": 96.0, "hollow": [Vector2(0.0, 4.8), Vector2(35.7, 39.6)]},
 	{"frontage": 2, "from": -32.0, "to": -20.0, "scene": "res://scenes/shops/gun_shop.tscn"},
-	{"frontage": 3, "from": 9.0, "to": 20.0, "scene": "res://scenes/shops/bar.tscn"},
+	{"frontage": 3, "from": 9.0, "to": 20.0, "scene": "res://scenes/shops/bar.tscn", "height": 24.0},
 	{"frontage": 3, "from": 20.0, "to": 32.0, "scene": "res://scenes/shops/clinic.tscn"},
 	{"frontage": 5, "from": 29.0, "to": 41.0, "scene": "res://scenes/shops/pawn_shop.tscn"},
 ]

@@ -20,6 +20,7 @@ var _overlay: Control
 var _prompt: Label
 var _credits: Label
 var _waypoint: WaypointMarker
+var _fade: ColorRect
 var _player: Player
 var _elapsed := 0.0
 
@@ -42,6 +43,11 @@ func _ready() -> void:
 	root.add_child(_waypoint)
 	_waypoint.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_build_overlay(root)
+	_fade = ColorRect.new()
+	_fade.color = Color(0, 0, 0, 0)
+	_fade.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	root.add_child(_fade)
+	_fade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 
 	var player := get_tree().get_first_node_in_group("player") as Player
 	_player = player
@@ -78,6 +84,13 @@ func _process(delta: float) -> void:
 	_prompt.visible = focus != null and _crosshair.visible
 	if _prompt.visible:
 		_prompt.text = "[E] " + focus.get_prompt()
+
+
+## Fades the whole screen to black (alpha 1) or back (alpha 0). Await the returned tween.
+func fade_to(alpha: float, seconds: float) -> Tween:
+	var tween := create_tween()
+	tween.tween_property(_fade, "color:a", alpha, seconds)
+	return tween
 
 
 func show_message(text: String, duration := 2.0) -> void:

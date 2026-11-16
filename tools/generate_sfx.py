@@ -375,6 +375,25 @@ def landing(rng):
     return normalize(lowpass(mix(thud, scuff), 2500), 0.55)
 
 
+def door_slide(rng):
+    n = seconds(0.55)
+    whoosh = [s * (math.sin(math.pi * i / n) ** 2) * 0.6 for i, s in enumerate(bandpass(noise(n, rng), 200, 1600))]
+    motor = [0.15 * math.sin(2 * math.pi * 90 * i / SAMPLE_RATE) * (math.sin(math.pi * i / n) ** 2) for i in range(n)]
+    clunk = place([v * 0.5 for v in body_hit(rng)], 0.45, 0.55)
+    return normalize(mix(whoosh, motor, clunk), 0.5)
+
+
+def elevator_ding(rng):
+    return normalize(mix(chime(rng, [1046], 0.9), place(chime(rng, [784], 0.9), 0.25, 1.2)), 0.45)
+
+
+def elevator_hum(rng):
+    n = seconds(3.0)
+    hum = [0.5 * math.sin(2 * math.pi * 70 * i / SAMPLE_RATE) + 0.2 * math.sin(2 * math.pi * 140 * i / SAMPLE_RATE) for i in range(n)]
+    air = [s * 0.3 for s in lowpass(noise(n, rng), 300)]
+    return normalize(crossfade_loop(mix(hum, air), 0.5), 0.4)
+
+
 def main():
     sounds = [
         ("rifle_shot.wav", rifle_shot),
@@ -399,6 +418,9 @@ def main():
         ("trade_cash.wav", cash_register),
         ("ui_click.wav", lambda rng: ui_blip(rng, 1200)),
         ("ui_deny.wav", ui_deny),
+        ("door_slide.wav", door_slide),
+        ("elevator_ding.wav", elevator_ding),
+        ("elevator_hum.wav", elevator_hum),
         ("footsteps/land_1.wav", landing),
         ("footsteps/land_2.wav", landing),
     ]
