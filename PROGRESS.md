@@ -59,7 +59,7 @@ User's combat direction (asked at the start): **street gang + police drones**, *
   - Tests: `tests/test_inventory.tscn`, `tests/test_save.tscn` (headless), `tests/shot_ui.tscn` and
     `tests/shot_pickups.tscn` (windowed screenshots, `-- --out=<prefix>`). New class_names need one
     `--import` run before tests can see them.
-- Part B: combat: **in progress**
+- Part B: combat: **done**
   - [x] B1 Player health: `Damageable` on the player body (layer 2; explosions now reach the player at half
     damage via `Damageable.explosion_multiplier`), regen after 5 s quiet, H = quick heal (med patch first),
     food heals a little. HUD: HP bar, red vignette, damage-direction arcs (`ui/damage_indicator.gd`).
@@ -89,6 +89,7 @@ User's combat direction (asked at the start): **street gang + police drones**, *
     sourceless explosion with salvage. HUD: `ui/wanted_stars.gd`. `GameState.wanted` mirrors the stars:
     merchants refuse to trade at 2+, Ren has a "heat" scene; Ren has new Jackal/police/med patch tips and a
     "Who are the Rust Jackals?" topic. Test: `tests/test_police.tscn`; shots: `tests/shot_police.tscn`.
-  - [ ] B5 Balance pass, docs
+  - [x] B5 Balance (forgiving: ~5 HP/s from all four Jackals in the open, ~3 HP/s from two drones, 5 s
+    regen delay), README controls/features/tests, CREDITS.
 - Part C: bug hunt, screenshot tour, BUGFIX_NOTES.md: not started
   - Noted for Part C: door number plates (Label3D) face into the apartments (local +Z), check from the hallway.

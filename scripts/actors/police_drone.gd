@@ -109,6 +109,11 @@ func leave() -> void:
 	_searchlight.visible = false
 
 
+## The player flatlined: the dispatch clears the heat, so this one heads home too.
+func on_player_respawned() -> void:
+	leave()
+
+
 # --- Behaviour ---------------------------------------------------------------------------------
 
 func _perceive() -> void:

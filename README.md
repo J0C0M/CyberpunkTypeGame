@@ -26,8 +26,11 @@ The renderer is Forward+ (Vulkan). You spawn inside a sushi cafe; walk out onto 
 | Move | W A S D (or arrow keys) |
 | Sprint | Shift |
 | Jump | Space |
-| Shoot (full auto) | Left mouse button |
-| Reload | R |
+| Shoot | Left mouse button (KS-47 full auto, pistol and shotgun one shot per click) |
+| Reload | R (the shotgun loads shell by shell; shooting interrupts) |
+| Switch weapon | 1 / 2 / 3 or the mouse wheel |
+| Inventory (use, drop, inspect, hotbar) | Tab or I |
+| Quick heal (best healing item: med patch first) | H |
 | Interact (talk, trade, doors, elevator, bed, couch, pick up) | E |
 | Pause menu (volumes, mouse sensitivity, quit), leave menus | Esc (clicking the game captures the mouse) |
 | Change TV channel (while seated) | A / D |
@@ -36,8 +39,10 @@ The renderer is Forward+ (Vulkan). You spawn inside a sushi cafe; walk out onto 
 | Toggle the retro filter (pixelation + dithering) | F3 |
 
 You start in the noodle bar. Talk to **Ren** behind the counter: Ren gives you some starting money,
-explains the block and can mark shops and your apartment on the HUD. Ammo is no longer free; buy
-it by the box at Iron Lotus Arms.
+the key card to your apartment and a noodle coupon, explains the block and can mark shops and your
+apartment on the HUD. Ammo is no longer free; buy it by the box at Iron Lotus Arms (which also sells
+a pistol and a shotgun). The game saves when you sleep in your bed and when you quit, and picks up
+where you left off on the next start (pause menu: NEW GAME starts over).
 
 ## What's in the game
 
@@ -45,6 +50,23 @@ it by the box at Iron Lotus Arms.
 - First-person controller with sprint, jump and head bob; retro low-res filter; an always-night
   neon city block with wet streets, skyline, flying-car traffic and robot dragons; wandering NPCs;
   the KS-47 hitscan rifle; HUD.
+
+### Prototype 4
+- **Inventory:** every item is a resource file (`assets/items/*.tres`, `ItemData`) with a generated
+  low-poly model and icon. Tab/I opens the inventory: category tabs, 30 slots with stacking, a detail
+  panel with value and effects, eat/drink/use, drop, inspect (a rotating 3D view) and the weapon hotbar.
+  Food and drinks heal a little and give short effects (faster sprint, steadier aim, a tipsy sway).
+  Items lie around the city and drop from bodies; the HUD lists what you pick up.
+- **Save system:** credits, inventory, the clock, Ren's state, waypoints, merchants' cash, stock and
+  mood, your position and loaded magazines go to `user://savegame.json` (sleep = save, quit = save).
+- **Health and death:** an HP bar, a red damage vignette, arcs that point at whoever is shooting you,
+  regeneration after a few quiet seconds and med patches. At zero you flatline and wake up in your
+  apartment (or at Ren's) with a small clinic bill.
+- **Weapons:** the KS-47, the Kitsune P9 pistol and the Oni-12 pump shotgun on a three-slot hotbar.
+- **The Rust Jackals:** a gang that holds the west end of the main street. They warn you off their
+  corner, then take cover behind cars and crates, fire short bursts, chase, search and flee when hurt.
+- **Police drones:** violence earns wanted stars; each star sends a drone that hunts you from above the
+  street. Lose them, or go home and sleep it off. Shopkeepers won't trade while drones are on you.
 
 ### Prototype 2
 - **Damage system:** `Damageable` health components with hit zones (`HitInfo`, `Damageable.deliver`)
@@ -82,15 +104,20 @@ scenes/
   actors/              Robot dragon, NPC and merchant scenes
   player/, weapons/    First-person player and the KS-47
 scripts/
-  core/                EventBus and GameState autoloads, RetroScreen, MatLib, Palette, SfxPool
-  combat/              HitInfo, Damageable, GlassPane, BreakableProp, Car, Explosions, DebrisPool
-  actors/              Person (health, death, panic), Npc, NpcCrowd, Merchant, NpcModel, RobotDragon
+  core/                EventBus, GameState, Settings and SaveGame autoloads, RetroScreen, MatLib, Palette, SfxPool
+  combat/              HitInfo, Damageable, Hitscan, GlassPane, BreakableProp, Car, CoverBlock, Explosions,
+                       DebrisPool, PoliceDispatch
+  actors/              Person (health, death, panic), Npc, NpcCrowd, Merchant, NpcModel, RobotDragon,
+                       GangMember, GangTurf, PoliceDrone, EnemyNav
   interaction/         Interactable, Door
-  items/               ItemDB, Inventory, ShopCatalog, Pickup
+  items/               ItemData, ItemDB, Inventory, ShopProfile, ShopCatalog, ItemModels, ItemIcons,
+                       Pickup, ItemScatter
   dialogue/            GuideDialogue (Ren's dialogue tree)
   world/               CityBuilder, Skyline, SushiCafe, ShopInterior, ApartmentBlock, FlightPath, ...
   props/               TvSet
-  player/, weapons/    Player, Footsteps, Rifle, RifleModel, ImpactEffects
+  player/, weapons/    Player, Footsteps, Firearm, WeaponHolder, Rifle/Pistol/ShotgunModel, ImpactEffects
+assets/items/          One ItemData resource per item; assets/shops/: one ShopProfile per kind of shop
+tests/                 Headless test scenes (test_*.tscn) and screenshot scenes (shot_*.tscn), see below
 shaders/               Retro filter, PS1 surfaces, facades, wet street, sky, TV channels, ...
 assets/audio/          Generated sounds (tools/generate_sfx.py)
 ui/                    HUD, waypoint marker, trade and dialogue screens, shared UiStyle
@@ -137,10 +164,20 @@ Quick headless smoke test:
 godot --headless --path . --quit-after 120
 ```
 
+Headless tests (each prints PASS/FAIL lines and exits with 1 on a failure). Run `--import` once
+after adding scripts with a new `class_name`:
+
+```bash
+godot --headless --path . res://tests/test_inventory.tscn
+```
+
+The tests are `test_inventory`, `test_save`, `test_health`, `test_weapons`, `test_gang` and
+`test_police`. The `shot_*.tscn` scenes render screenshots instead (run them windowed with
+`-- --out=/tmp/prefix`). Tests and screenshot runs never read or write your save.
+
 ## Known limitations
 
-- No enemies or player health yet; the dragons are ambient only.
-- Credits and inventory are not saved between sessions yet.
+- The dragons are ambient only. Enemies are limited to one gang corner and the police drones.
 - Sounds are simple synthesised placeholders.
 - Text on signs uses Godot's default font plus your system fonts for Japanese characters. If no
   CJK font is installed, those signs show empty boxes.

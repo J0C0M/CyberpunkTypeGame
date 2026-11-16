@@ -10,7 +10,9 @@ No third-party asset packs are used. Everything is original to this project:
 
 | Asset | Source | License |
 | --- | --- | --- |
-| All 3D models (city, cafe, rifle, NPCs, dragons, props) | Generated from primitives by the scripts in `scripts/` | Project |
+| All 3D models (city, cafe, guns, NPCs, gang, police drones, dragons, props, items) | Generated from primitives by the scripts in `scripts/` | Project |
+| Item icons | Rendered at runtime from the item models (`scripts/items/item_icons.gd`) | Project |
+| Items, gangs and brands (Rust Jackals, Kitsune P9, Oni-12, Neo-Heights) | Invented for this project | Project |
 | All textures (bullet holes, steam puffs) | Generated at runtime in code | Project |
 | Shaders | Written for this project (`shaders/`) | Project |
 | Sound effects, footsteps and TV audio (`assets/audio/**`) | Synthesised by `tools/generate_sfx.py` | Project |
