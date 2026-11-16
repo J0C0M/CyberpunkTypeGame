@@ -10,8 +10,6 @@ signal reload_finished
 
 @export var rounds_per_minute := 600.0
 @export var magazine_size := 30
-@export var reserve_ammo := 210
-@export var max_reserve_ammo := 300
 @export var reload_time := 2.0
 @export var max_range := 400.0
 ## Damage per bullet before hit-zone multipliers (headshots, engine blocks...).
@@ -35,8 +33,21 @@ const SHOT_ALARM_RADIUS := 35.0
 @onready var reload_sound: AudioStreamPlayer = $ReloadSound
 @onready var dry_fire_sound: AudioStreamPlayer = $DryFireSound
 
+## Inventory item that feeds this gun.
+const AMMO_ID := &"ammo_ks47"
+
 var ammo_in_magazine := 0
 var is_reloading := false
+## Spare rounds live in the player's inventory, so they can be bought, sold and picked up.
+var reserve_ammo: int:
+	get:
+		return GameState.inventory.count(AMMO_ID)
+	set(value):
+		var current := GameState.inventory.count(AMMO_ID)
+		if value > current:
+			GameState.inventory.add(AMMO_ID, value - current)
+		elif value < current:
+			GameState.inventory.remove(AMMO_ID, current - value)
 
 var _player: Player
 var _rest := Transform3D.IDENTITY
@@ -67,6 +78,7 @@ func _ready() -> void:
 	_build_flash()
 	_build_tracer()
 	flash_light.visible = false
+	GameState.inventory.changed.connect(func() -> void: ammo_changed.emit(ammo_in_magazine, reserve_ammo))
 	# Deferred so listeners that connect in their own _ready still get the starting values.
 	ammo_changed.emit.call_deferred(ammo_in_magazine, reserve_ammo)
 
@@ -114,12 +126,6 @@ func get_spread() -> float:
 ## 0..1 while reloading.
 func get_reload_progress() -> float:
 	return clampf(_reload_elapsed / reload_time, 0.0, 1.0) if is_reloading else 0.0
-
-
-## Tops the reserve up to the maximum (used by ammo crates).
-func refill() -> void:
-	reserve_ammo = max_reserve_ammo
-	ammo_changed.emit(ammo_in_magazine, reserve_ammo)
 
 
 func _finish_reload() -> void:

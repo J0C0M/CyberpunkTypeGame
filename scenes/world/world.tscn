@@ -10,7 +10,6 @@
 [ext_resource type="Script" path="res://scripts/actors/npc_crowd.gd" id="10_crowd"]
 [ext_resource type="PackedScene" path="res://scenes/actors/npc.tscn" id="11_npc"]
 [ext_resource type="Script" path="res://scripts/weapons/impact_effects.gd" id="12_impacts"]
-[ext_resource type="PackedScene" path="res://scenes/props/ammo_crate.tscn" id="13_crate"]
 [ext_resource type="AudioStream" path="res://assets/audio/city_ambience.wav" id="14_ambience"]
 [ext_resource type="AudioStream" path="res://assets/audio/dragon_hum.wav" id="15_hum"]
 [ext_resource type="Script" path="res://scripts/combat/debris_pool.gd" id="16_debris"]
@@ -144,9 +143,6 @@ npc_scene = ExtResource("11_npc")
 
 [node name="SushiCafe" parent="." instance=ExtResource("5_cafe")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 24, 0, -9)
-
-[node name="AmmoCrate" parent="." instance=ExtResource("13_crate")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 19, 0.15, -10.25)
 
 [node name="ImpactEffects" type="Node3D" parent="."]
 script = ExtResource("12_impacts")

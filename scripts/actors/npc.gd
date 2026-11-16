@@ -119,6 +119,7 @@ func _pick_flee_target() -> void:
 
 func _on_died(hit: HitInfo) -> void:
 	super(hit)
+	Pickup.drop_loot(get_parent(), global_position + global_basis.z * 0.6)
 	agent.velocity = Vector3.ZERO
 	agent.avoidance_enabled = false
 

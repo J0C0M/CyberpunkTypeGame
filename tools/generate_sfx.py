@@ -295,6 +295,17 @@ def fire_loop(rng):
     return normalize(crossfade_loop(mix(roar, highpass(crackles, 1200)), 0.5), 0.55)
 
 
+def chime(rng, notes, length=0.35):
+    n = seconds(length)
+    out = [0.0] * n
+    for k, freq in enumerate(notes):
+        start = seconds(k * 0.07)
+        for i in range(n - start):
+            t = i / SAMPLE_RATE
+            out[start + i] += (math.sin(2 * math.pi * freq * t) + 0.3 * math.sin(4 * math.pi * freq * t)) * math.exp(-t / 0.09)
+    return normalize(lowpass(out, 5000), 0.45)
+
+
 def main():
     rng = random.Random(2077)
     write("rifle_shot.wav", rifle_shot(rng))
@@ -316,6 +327,7 @@ def main():
     write("spark_zap.wav", spark_zap(rng))
     write("explosion.wav", explosion(rng))
     write("fire_loop.wav", fire_loop(rng))
+    write("pickup.wav", chime(rng, [880, 1320]))
 
 
 if __name__ == "__main__":

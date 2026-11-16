@@ -18,6 +18,7 @@ var _message: Label
 var _message_time := 0.0
 var _overlay: Control
 var _prompt: Label
+var _credits: Label
 var _player: Player
 var _elapsed := 0.0
 
@@ -154,6 +155,16 @@ func _build_texts(root: Control) -> void:
 	location.offset_right = -28
 	location.offset_top = 22
 	location.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+
+	_credits = _label("¢ 0", 22, Palette.AMBER, Palette.AMBER.darkened(0.7))
+	root.add_child(_credits)
+	_credits.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
+	_credits.offset_left = -300
+	_credits.offset_right = -28
+	_credits.offset_top = 44
+	_credits.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	GameState.credits_changed.connect(func(amount: int) -> void: _credits.text = "¢ %d" % amount)
+	_credits.text = "¢ %d" % GameState.credits
 
 	_prompt = _label("", 20, Color.WHITE, Palette.CYAN.darkened(0.4))
 	root.add_child(_prompt)
