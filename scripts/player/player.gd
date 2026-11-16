@@ -1,6 +1,7 @@
 class_name Player
 extends CharacterBody3D
-## First-person controller: walk, sprint, jump, mouse look, head bob and weapon recoil.
+## First-person controller: walk, sprint, jump, mouse look, head bob, weapon recoil, explosion
+## shake and knockback, and the interaction ray that finds what the player is looking at.
 
 @export_group("Movement")
 @export var walk_speed := 4.5
@@ -14,6 +15,9 @@ extends CharacterBody3D
 @export var base_fov := 75.0
 @export var sprint_fov_boost := 7.0
 
+@export_group("Interaction")
+@export var reach := 2.6
+
 @export_group("Head bob")
 @export var bob_frequency := 1.9
 @export var bob_amount := 0.035
@@ -25,6 +29,8 @@ extends CharacterBody3D
 @onready var footsteps: AudioStreamPlayer = $Footsteps
 
 var is_sprinting := false
+## The Interactable under the crosshair within reach, or null. The HUD shows its prompt.
+var focused_interactable: Interactable
 
 var _gravity: float = ProjectSettings.get_setting("physics/3d/default_gravity")
 var _bob_phase := 0.0
@@ -89,7 +95,25 @@ func _physics_process(delta: float) -> void:
 	move_and_slide()
 	velocity.x -= _knockback.x
 	velocity.z -= _knockback.z
+	_update_interaction()
 	_update_camera_effects(delta)
+
+
+## Looks for an Interactable in front of the camera; walls and props block the ray.
+func _update_interaction() -> void:
+	focused_interactable = null
+	if not GameState.is_free_roaming():
+		return
+	var origin := camera.global_position
+	var query := PhysicsRayQueryParameters3D.create(origin, origin - camera.global_basis.z * reach, 1 | 8 | 32)
+	query.collide_with_areas = true
+	query.exclude = [get_rid()]
+	var hit := get_world_3d().direct_space_state.intersect_ray(query)
+	var target := hit.get("collider") as Interactable
+	if target and target.enabled:
+		focused_interactable = target
+		if Input.is_action_just_pressed("interact") and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
+			target.interact(self)
 
 
 func _update_camera_effects(delta: float) -> void:

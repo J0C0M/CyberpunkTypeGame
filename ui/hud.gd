@@ -3,7 +3,7 @@ extends CanvasLayer
 ## hint that fades out, short messages (call_group("hud", "show_message", text)) and a
 ## "click to play" overlay while the mouse is free.
 
-const HINT_TEXT := "WASD move   SHIFT sprint   SPACE jump   LMB fire   R reload\nESC free mouse   F2 vertex wobble   F3 retro filter"
+const HINT_TEXT := "WASD move   SHIFT sprint   SPACE jump   LMB fire   R reload   E interact\nESC free mouse   F2 vertex wobble   F3 retro filter"
 const HINT_DURATION := 12.0
 
 var _rifle: Rifle
@@ -17,6 +17,8 @@ var _hint: Label
 var _message: Label
 var _message_time := 0.0
 var _overlay: Control
+var _prompt: Label
+var _player: Player
 var _elapsed := 0.0
 
 
@@ -34,6 +36,7 @@ func _ready() -> void:
 	_build_overlay(root)
 
 	var player := get_tree().get_first_node_in_group("player") as Player
+	_player = player
 	if player and player.weapon:
 		_rifle = player.weapon
 		_rifle.ammo_changed.connect(_on_ammo_changed)
@@ -55,8 +58,12 @@ func _process(delta: float) -> void:
 		_message_time -= delta
 		_message.modulate.a = clampf(_message_time / 0.6, 0.0, 1.0)
 	var free_mouse := Input.mouse_mode != Input.MOUSE_MODE_CAPTURED and not get_tree().has_meta("screenshot_mode")
-	_overlay.visible = free_mouse
-	_crosshair.visible = not free_mouse
+	_overlay.visible = free_mouse and GameState.is_free_roaming()
+	_crosshair.visible = not free_mouse and GameState.is_free_roaming()
+	var focus := _player.focused_interactable if _player else null
+	_prompt.visible = focus != null and _crosshair.visible
+	if _prompt.visible:
+		_prompt.text = "[E] " + focus.get_prompt()
 
 
 func show_message(text: String, duration := 2.0) -> void:
@@ -147,6 +154,16 @@ func _build_texts(root: Control) -> void:
 	location.offset_right = -28
 	location.offset_top = 22
 	location.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+
+	_prompt = _label("", 20, Color.WHITE, Palette.CYAN.darkened(0.4))
+	root.add_child(_prompt)
+	_prompt.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
+	_prompt.offset_left = -300
+	_prompt.offset_right = 300
+	_prompt.offset_top = 34
+	_prompt.offset_bottom = 64
+	_prompt.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_prompt.visible = false
 
 	_message = _label("", 24, Palette.LIME, Palette.LIME.darkened(0.7))
 	root.add_child(_message)
