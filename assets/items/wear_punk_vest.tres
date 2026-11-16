@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Script" path="res://scripts/items/item_data.gd" id="1_item"]
+
+[resource]
+script = ExtResource("1_item")
+id = &"wear_punk_vest"
+display_name = "Studded Punk Vest"
+category = &"clothing"
+price = 95
+pack = 1
+stack_size = 1
+description = "Sleeveless black vest, studs and a pink back patch."
+inspect_text = "Hand-set studs, a pink neon patch on the back and a smell of old festivals."
+model = &"clothes"
+tint = Color(0.05, 0.05, 0.05, 1)
+wear_slot = &"jacket"
+wear_layer = 2
+droppable = false
+sellable = false

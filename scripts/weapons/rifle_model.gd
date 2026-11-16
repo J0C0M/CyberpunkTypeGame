@@ -1,14 +1,17 @@
 @tool
 class_name RifleModel
 extends Node3D
-## Low-poly AK-style rifle with a few cyberpunk mods (neon strips, red-dot sight) and gloved
-## hands, built from primitives. The grip is at the origin and the barrel points along -Z.
-## The magazine is a separate node so the reload animation can drop it.
+## Low-poly AK-style rifle with a few cyberpunk mods (neon strips, red-dot sight), built from
+## primitives. The grip is at the origin and the barrel points along -Z. The magazine is a
+## separate node so the reload animation can drop it. `right_hand` and `left_hand` mark where the
+## player's hands hold it (ViewArms puts the character's own arms there).
 
 ## Render layer for the first-person model, lit by an extra fill light that only affects it.
 const VIEW_MODEL_LAYER := 2
 
 var magazine: Node3D
+var right_hand: Node3D
+var left_hand: Node3D
 
 
 func _ready() -> void:
@@ -18,8 +21,6 @@ func _ready() -> void:
 	var steel_light := MatLib.surface(Color(0.16, 0.16, 0.18), 0.3, 0.85, 0.05)
 	var wood := MatLib.surface(Color(0.36, 0.17, 0.08), 0.45, 0.0, 0.1)
 	var polymer := MatLib.surface(Color(0.04, 0.04, 0.045), 0.6, 0.0, 0.05)
-	var glove := MatLib.surface(Color(0.05, 0.05, 0.06), 0.7, 0.0, 0.05)
-	var sleeve := MatLib.surface(Color(0.1, 0.08, 0.13), 0.8, 0.0, 0.05)
 	var neon := MatLib.neon(Palette.CYAN, 3.0)
 
 	var geo := GeoBatch.new()
@@ -51,13 +52,9 @@ func _ready() -> void:
 	# Wooden stock with a small drop.
 	geo.add_box(Vector3(0.04, 0.06, 0.26), Transform3D(Basis(Vector3.RIGHT, deg_to_rad(6.0)), Vector3(0, -0.025, 0.2)), wood)
 	geo.add_box(Vector3(0.042, 0.09, 0.02), Transform3D(Basis(Vector3.RIGHT, deg_to_rad(6.0)), Vector3(0, -0.04, 0.33)), polymer)
-	# Gloved hands and sleeves.
-	geo.add_box(Vector3(0.055, 0.075, 0.09), Transform3D(Basis(Vector3.RIGHT, deg_to_rad(-18.0)), Vector3(0.012, -0.08, 0.05)), glove)
-	geo.add_bar(Vector3(0.02, -0.11, 0.1), Vector3(0.09, -0.26, 0.42), 0.075, sleeve)
-	geo.add_box_at(Vector3(0.075, 0.05, 0.1), Vector3(-0.008, -0.044, -0.33), glove)
-	geo.add_bar(Vector3(-0.03, -0.075, -0.3), Vector3(-0.24, -0.27, 0.08), 0.075, sleeve)
-	geo.add_box_at(Vector3(0.012, 0.012, 0.06), Vector3(-0.045, -0.07, -0.27), neon)
 	_add_view_mesh(root, geo, "Body")
+	right_hand = _hand(root, "RightHand", Vector3(0.012, -0.075, 0.045))
+	left_hand = _hand(root, "LeftHand", Vector3(-0.006, -0.04, -0.27))
 
 	magazine = Node3D.new()
 	magazine.name = "Magazine"
@@ -68,6 +65,14 @@ func _ready() -> void:
 		mag.add_box(Vector3(0.03, 0.075, 0.06), Transform3D(Basis(Vector3.RIGHT, deg_to_rad(piece[1])), piece[0]), steel)
 	mag.add_box(Vector3(0.032, 0.012, 0.01), Transform3D(Basis(Vector3.RIGHT, deg_to_rad(18.0)), Vector3(0, -0.17, -0.128)), MatLib.neon(Palette.PINK, 3.0))
 	_add_view_mesh(magazine, mag, "MagazineMesh")
+
+
+func _hand(parent: Node3D, node_name: String, at: Vector3) -> Node3D:
+	var marker := Node3D.new()
+	marker.name = node_name
+	marker.position = at
+	parent.add_child(marker)
+	return marker
 
 
 func _add_view_mesh(parent: Node3D, geo: GeoBatch, node_name: String) -> void:

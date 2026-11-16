@@ -20,6 +20,33 @@ func _ready() -> void:
 		if node is ApartmentBlock:
 			block = node
 
+	# The player's own body in first person.
+	_check(_player.body != null and _player.body.visible, "the player has a body")
+	_check(_player.camera.cull_mask & CharacterRig.FIRST_PERSON_HIDDEN == 0, "the first-person camera leaves out the head and arms")
+	_check(absf(_player.head.position.y - _player.body.eye_height()) < 0.001, "the camera sits at the character's eye height")
+	var arms := _player.weapon_holder.get_node_or_null("ViewArms") as ViewArms
+	await get_tree().process_frame
+	_check(arms != null and arms.visible and arms.get_child_count() == 6, "first-person arms hold the gun")
+	var gun_in_hand := _player.body.slot(&"hand_r").get_child(0) as MeshInstance3D
+	_check(gun_in_hand != null and gun_in_hand.layers == CharacterRig.FIRST_PERSON_HIDDEN, "the body holds the gun too, hidden from first person")
+	var shadows := get_tree().root.find_children("*", "Light3D", true, false).filter(func(l: Light3D) -> bool: return l.shadow_enabled)
+	_check(shadows.size() >= 1, "lights near the player cast shadows (%d)" % shadows.size())
+
+	# Mirrors: three of them, rendering only while the player stands close in front.
+	var mirrors := get_tree().get_nodes_in_group("mirrors")
+	_check(mirrors.size() == 3, "mirrors in the bathroom, Lucky Pawn and Cyberware (%d)" % mirrors.size())
+	var mirror := mirrors[0] as Mirror
+	var viewport := mirror.get("_viewport") as SubViewport
+	await get_tree().process_frame
+	_check(viewport.render_target_update_mode == SubViewport.UPDATE_DISABLED, "a mirror far away doesn't render")
+	var spot := _player.global_position
+	_player.global_position = mirror.global_position + mirror.global_basis.z * 1.0 - Vector3.UP * 1.5
+	await get_tree().process_frame
+	await get_tree().process_frame
+	_check(viewport.render_target_update_mode == SubViewport.UPDATE_ALWAYS, "standing in front of it switches it on")
+	_player.global_position = spot
+	await get_tree().physics_frame
+
 	# Out of the noodle bar onto the street (the shop front faces +Z).
 	var start := _player.global_position
 	await _walk(Vector3(0, 0, 1), 3.0)

@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Script" path="res://scripts/items/item_data.gd" id="1_item"]
+
+[resource]
+script = ExtResource("1_item")
+id = &"wear_ripped_jeans"
+display_name = "Ripped Jeans"
+category = &"clothing"
+price = 40
+pack = 1
+stack_size = 1
+description = "Faded blue jeans with honest rips."
+inspect_text = "The rips came naturally. The fading did too. The jeans are older than Block 7."
+model = &"clothes"
+tint = Color(0.18, 0.24, 0.42, 1)
+wear_slot = &"pants"
+wear_layer = 1
+droppable = false
+sellable = false

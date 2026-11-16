@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Script" path="res://scripts/items/item_data.gd" id="1_item"]
+
+[resource]
+script = ExtResource("1_item")
+id = &"wear_tech_gloves"
+display_name = "Tech Gloves"
+category = &"clothing"
+price = 40
+pack = 1
+stack_size = 1
+description = "Black gloves with lit fingertips."
+inspect_text = "Touchscreen-friendly fingertips that glow cyan when they're warm."
+model = &"clothes"
+tint = Color(0.05, 0.05, 0.06, 1)
+wear_slot = &"gloves"
+wear_layer = 1
+droppable = false
+sellable = false

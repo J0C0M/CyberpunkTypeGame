@@ -1,11 +1,14 @@
 @tool
 class_name PistolModel
 extends Node3D
-## Low-poly "Kitsune P9" pistol with a pink-lit slide and two gloved hands, built from primitives.
+## Low-poly "Kitsune P9" pistol with a pink-lit slide, built from primitives; `right_hand` and
+## `left_hand` mark the two-handed grip for the character's first-person arms (ViewArms).
 ## The grip is at the origin and the barrel points along -Z. The slide kicks back on every shot
 ## (it listens to the parent Firearm's `fired`) and the magazine is a separate node for reloads.
 
 var magazine: Node3D
+var right_hand: Node3D
+var left_hand: Node3D
 var _slide: Node3D
 var _kick := 0.0
 
@@ -16,8 +19,6 @@ func _ready() -> void:
 	# Two-tone: a light frame and a gunmetal slide, so the small gun still reads at night.
 	var steel := MatLib.surface(Color(0.22, 0.22, 0.25), 0.3, 0.8, 0.05)
 	var polymer := MatLib.surface(Color(0.62, 0.6, 0.64), 0.5, 0.0, 0.05)
-	var glove := MatLib.surface(Color(0.05, 0.05, 0.06), 0.7, 0.0, 0.05)
-	var sleeve := MatLib.surface(Color(0.1, 0.08, 0.13), 0.8, 0.0, 0.05)
 	var neon := MatLib.neon(Palette.PINK, 3.0)
 
 	var body := GeoBatch.new()
@@ -28,12 +29,10 @@ func _ready() -> void:
 	body.add_box_at(Vector3(0.006, 0.02, 0.008), Vector3(0, -0.012, -0.03), steel)
 	body.add_box_at(Vector3(0.028, 0.02, 0.04), Vector3(0, -0.012, -0.135), steel)
 	body.add_box_at(Vector3(0.02, 0.012, 0.004), Vector3(0, -0.012, -0.156), MatLib.neon(Palette.COOL_WHITE, 5.0))
-	# Gloved hands: the shooting hand round the grip, the support hand under it.
-	body.add_box(Vector3(0.05, 0.075, 0.075), Transform3D(Basis(Vector3.RIGHT, deg_to_rad(-14.0)), Vector3(0.006, -0.06, 0.012)), glove)
-	body.add_box(Vector3(0.045, 0.06, 0.07), Transform3D(Basis(Vector3.FORWARD, deg_to_rad(25.0)), Vector3(-0.03, -0.075, 0.0)), glove)
-	body.add_bar(Vector3(0.012, -0.09, 0.05), Vector3(0.09, -0.25, 0.36), 0.07, sleeve)
-	body.add_bar(Vector3(-0.04, -0.1, 0.04), Vector3(-0.2, -0.26, 0.34), 0.07, sleeve)
 	_add_view_mesh(root, body, "Body")
+	# The shooting hand round the grip, the support hand cupped under it.
+	right_hand = _hand(root, "RightHand", Vector3(0.006, -0.06, 0.012))
+	left_hand = _hand(root, "LeftHand", Vector3(-0.028, -0.08, 0.0))
 
 	_slide = Node3D.new()
 	_slide.name = "Slide"
@@ -62,6 +61,14 @@ func _process(delta: float) -> void:
 		return
 	_kick = move_toward(_kick, 0.0, delta * 9.0)
 	_slide.position.z = _kick * 0.045
+
+
+func _hand(parent: Node3D, node_name: String, at: Vector3) -> Node3D:
+	var marker := Node3D.new()
+	marker.name = node_name
+	marker.position = at
+	parent.add_child(marker)
+	return marker
 
 
 func _add_view_mesh(parent: Node3D, geo: GeoBatch, node_name: String) -> void:

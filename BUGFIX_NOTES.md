@@ -40,6 +40,7 @@ what was wrong, how it was found and what changed. Tools used for the pass (all 
 | 14 | Merchants lost reputation with the player and got angry about gunfire the player didn't cause (any shot near the shop counted). | Code review while adding the gang | Danger events pass on who caused them; merchants only blame the player's shots and hits. |
 | 15 | The couch view was a fixed camera. | Known issue from the handoff | Seated, the mouse turns the head a little (about 40 degrees each way). |
 | 16 | Flatlining while seated would have left the camera stuck at the couch; flatlining during an elevator ride would have handed control back early when the ride finished. | Code review of the new death sequence | The seat lets go of the camera when the player dies; the elevator ride stops quietly if something else takes over input. |
+| 19 | Ren's main menu (eight choices) ran off the bottom of the screen. | Playtest (user) | The dialogue box is taller and its choices scroll (mouse wheel); keys 1-8 still pick any choice. |
 | 17 | The 1107 door's interact box sat mostly on one side of the door, only a centimetre ahead of the panel's collider from the other side. | Writing the key-card test | The box is centred on the door, so both sides reach it before the panel. |
 
 ## Performance

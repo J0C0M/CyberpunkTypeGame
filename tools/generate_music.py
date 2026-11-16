@@ -402,9 +402,32 @@ def apartment_radio():
     return np.tanh((mid + (out - mid) * 0.3) * 1.5) * 0.8
 
 
+def menu():
+    """Title screen: slow minor pads, a glassy arpeggio, a heartbeat kick and rain."""
+    tr = Track(66, 16, 11)
+    prog = [(45, "m9"), (41, "maj9"), (43, "6"), (40, "m7")]
+    for i in range(8):
+        root, kind = prog[i % 4]
+        tr.add(pad([midi(n) for n in chord(root + 12, kind)], tr.beat * 8.8, 5, 0.004), i * 8, 0.0, 0.5)
+        tr.add(bass(midi(root - 12), tr.beat * 7.8, 2), i * 8, 0.0, 0.55)
+        notes = chord(root + 24, kind)
+        for step in range(16):
+            note = notes[(step * 3 + i) % len(notes)]
+            tr.add(bell(midi(note), 2.0) * 0.6, i * 8 + step * 0.5, float(np.sin(step * 0.7)) * 0.7, 0.07)
+        for beat in (0, 4):
+            tr.add(kick(0.6, 0.5), i * 8 + beat, 0.0, 0.35)
+        if i >= 4:
+            for step in range(4):
+                tr.add(lead(midi(notes[step % len(notes)] - 12), tr.beat * 1.8), i * 8 + step * 2, -0.3, 0.06)
+    tr.add_noise_bed(0.03, 1500, 9000)
+    tr.add_noise_bed(0.02, 40, 200)
+    return tr.render(0.55, 4.0, 5500)
+
+
 TRACKS = {
     "street": street, "elevator": elevator, "noodle": noodle, "bar": bar, "cyberware": cyberware,
     "clinic": clinic, "guns": guns, "pawn": pawn, "sushi": sushi, "apartment_radio": apartment_radio,
+    "menu": menu,
 }
 
 
@@ -426,8 +449,12 @@ def write(name, samples):
 
 
 def main():
+    import sys
+    # Optional track names: `python3 tools/generate_music.py menu` regenerates just that one.
+    wanted = sys.argv[1:] or list(TRACKS)
     for name, make in TRACKS.items():
-        write(name, make())
+        if name in wanted:
+            write(name, make())
 
 
 if __name__ == "__main__":

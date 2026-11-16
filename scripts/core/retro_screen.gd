@@ -17,7 +17,22 @@ var _wobble_enabled := true
 
 
 func _ready() -> void:
+	add_to_group("retro_screen")
 	get_viewport().size_changed.connect(_apply)
+	apply_settings()
+
+
+## Reads the retro-filter strength from Settings: 0 turns the filter off; higher values mean
+## bigger pixels, fewer colours and stronger dithering (0.6 is the original look).
+func apply_settings() -> void:
+	var strength := Settings.retro_strength
+	retro_enabled = strength > 0.01
+	target_height = roundi(360.0 * pow(2.0, (0.6 - strength) * 1.25))
+	var post := material as ShaderMaterial
+	if post:
+		post.set_shader_parameter("dither_strength", 1.4 * strength)
+		post.set_shader_parameter("color_levels", lerpf(64.0, 18.0, strength))
+		post.set_shader_parameter("vignette", minf(0.6, 0.63 * strength))
 	_apply()
 
 

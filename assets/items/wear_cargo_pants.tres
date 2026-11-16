@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Script" path="res://scripts/items/item_data.gd" id="1_item"]
+
+[resource]
+script = ExtResource("1_item")
+id = &"wear_cargo_pants"
+display_name = "Cargo Pants"
+category = &"clothing"
+price = 45
+pack = 1
+stack_size = 1
+description = "Olive cargos. Pockets for everything."
+inspect_text = "Eight pockets, three of them hidden. One still has a receipt from a noodle stand that closed years ago."
+model = &"clothes"
+tint = Color(0.2, 0.22, 0.14, 1)
+wear_slot = &"pants"
+wear_layer = 1
+droppable = false
+sellable = false

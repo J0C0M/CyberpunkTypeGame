@@ -41,6 +41,8 @@ signal died(hit: HitInfo)
 @export var death_penalty_cap := 150
 
 const HURT_SOUND := preload("res://assets/audio/player_hurt.wav")
+## How far behind the camera the body stands.
+const BODY_SETBACK := 0.13
 const FLATLINE_SOUND := preload("res://assets/audio/flatline.wav")
 ## Healing items H uses, best first.
 const QUICK_HEAL: Array[StringName] = [&"med_patch", &"sushi", &"noodles", &"onigiri"]
@@ -58,6 +60,10 @@ var weapon: Firearm:
 
 var health: Damageable
 var is_dead := false
+## Who the player is (look, outfit); see apply_character().
+var character: CharacterData
+## The character's body (CharacterModel) and first-person arms (ViewArms).
+var body: CharacterModel
 var is_sprinting := false
 ## The Interactable under the crosshair within reach, or null. The HUD shows its prompt.
 var focused_interactable: Interactable
@@ -75,6 +81,9 @@ var _since_hurt := 0.0
 var _hurt_audio: AudioStreamPlayer
 ## Where the player started (Ren's noodle bar): the respawn point without a key card.
 var _start := Transform3D.IDENTITY
+var _arms: ViewArms
+var _body_time := 0.0
+var _body_aim := 0.0
 
 
 func _ready() -> void:
@@ -90,6 +99,7 @@ func _ready() -> void:
 	Damageable.register(self, health, &"body")
 	health.damaged.connect(_on_damaged)
 	health.died.connect(_on_died)
+	weapon_holder.weapon_changed.connect(_show_weapon_on_body)
 	_hurt_audio = AudioStreamPlayer.new()
 	_hurt_audio.stream = HURT_SOUND
 	_hurt_audio.bus = &"SFX"
@@ -164,7 +174,7 @@ func _flatline() -> void:
 	velocity = Vector3.ZERO
 	_knockback = Vector3.ZERO
 	head.rotation = Vector3.ZERO
-	head.position.y = 1.62
+	head.position.y = body.eye_height() if body else 1.62
 	weapon_holder.visible = true
 	restore_health()
 	hud.show_flatline(false)
@@ -195,8 +205,16 @@ func _quick_heal() -> void:
 ## Mouse look; called by Main for every captured mouse motion event.
 func look(relative: Vector2) -> void:
 	var sensitivity := Settings.mouse_sensitivity
+	var vertical := relative.y * (-1.0 if Settings.invert_y else 1.0)
 	rotate_y(-relative.x * sensitivity)
-	head.rotation.x = clampf(head.rotation.x - relative.y * sensitivity, deg_to_rad(-88.0), deg_to_rad(88.0))
+	head.rotation.x = clampf(head.rotation.x - vertical * sensitivity, deg_to_rad(-88.0), deg_to_rad(88.0))
+
+
+## Right stick look (controller), scaled like a fast mouse.
+func _stick_look(delta: float) -> void:
+	var stick := Vector2(Input.get_joy_axis(0, JOY_AXIS_RIGHT_X), Input.get_joy_axis(0, JOY_AXIS_RIGHT_Y))
+	if stick.length() > 0.15 and GameState.is_free_roaming():
+		look(stick * stick.length() * delta * 1400.0)
 
 
 ## Mouse wheel: next or previous weapon on the hotbar.
@@ -223,7 +241,9 @@ func apply_knockback(impulse: Vector3) -> void:
 
 
 func _physics_process(delta: float) -> void:
+	_stick_look(delta)
 	_update_health(delta)
+	_animate_body(delta)
 	if is_dead:
 		_update_camera_effects(delta)
 		return
@@ -254,6 +274,58 @@ func _physics_process(delta: float) -> void:
 	footsteps.update(self, delta, Vector2(global_position.x - before.x, global_position.z - before.z).length())
 	_update_interaction()
 	_update_camera_effects(delta)
+
+
+## Takes on a character's look: the body (seen when looking down, in mirrors and in shadows),
+## the first-person arms, and the camera at the character's eye height.
+func apply_character(data: CharacterData) -> void:
+	character = data
+	if body:
+		body.queue_free()
+	body = CharacterModel.new()
+	body.name = "Body"
+	body.data = data
+	# A little behind the camera, so looking down shows the chest and legs, not the inside of the head.
+	body.position = Vector3(0, 0, BODY_SETBACK)
+	add_child(body)
+	head.position.y = body.eye_height()
+	camera.cull_mask &= ~CharacterRig.FIRST_PERSON_HIDDEN
+	if _arms == null:
+		_arms = ViewArms.new()
+		_arms.name = "ViewArms"
+		_arms.holder = weapon_holder
+		weapon_holder.add_child(_arms)
+	_arms.build(body)
+	_show_weapon_on_body(weapon)
+
+
+## The gun in hand also hangs in the body's right hand (for mirrors, shadows, third person).
+func _show_weapon_on_body(gun: Firearm) -> void:
+	if body == null:
+		return
+	var mount := body.slot(&"hand_r")
+	for child in mount.get_children():
+		child.queue_free()
+	if gun:
+		var model := ItemModels.build(gun.item_id)
+		# Barrel (+X) along the hand (bone -Y), top of the gun up when the arm points forward.
+		model.transform = Transform3D(Basis(Vector3(0, -1, 0), Vector3(0, 0, -1), Vector3(1, 0, 0)), Vector3(0, -0.02, 0.0))
+		# Like the arm holding it: seen in mirrors and third person, not by the first-person camera.
+		model.layers = CharacterRig.FIRST_PERSON_HIDDEN
+		mount.add_child(model)
+
+
+## Walks the body with the footsteps; the right arm holds the gun up.
+func _animate_body(delta: float) -> void:
+	if body == null:
+		return
+	_body_time += delta
+	var speed := Vector2(velocity.x, velocity.z).length() if is_on_floor() else 0.0
+	var walk := clampf(speed / walk_speed, 0.0, 1.2)
+	var run := clampf((speed - walk_speed) / (sprint_speed - walk_speed), 0.0, 1.0)
+	var aim := 1.0 if weapon and not is_sprinting else 0.0
+	_body_aim = move_toward(_body_aim, aim, delta * 4.0)
+	body.pose(footsteps.phase, walk, run, _body_aim, 0.0, _body_time)
 
 
 func save_data() -> Dictionary:
@@ -310,11 +382,12 @@ func _update_camera_effects(delta: float) -> void:
 		return
 	# The bob follows the footstep phase (one dip per step), so steps and bob line up.
 	var speed := Vector2(velocity.x, velocity.z).length() if is_on_floor() else 0.0
-	_bob_strength = lerpf(_bob_strength, clampf(speed / walk_speed, 0.0, 1.5) * bob_amount, 1.0 - exp(-8.0 * delta))
+	var bob := bob_amount if Settings.head_bob else 0.0
+	_bob_strength = lerpf(_bob_strength, clampf(speed / walk_speed, 0.0, 1.5) * bob, 1.0 - exp(-8.0 * delta))
 	var phase := footsteps.phase
 	camera.position = _camera_rest + Vector3(cos(phase) * _bob_strength * 0.5, absf(sin(phase)) * _bob_strength, 0.0)
 
-	var target_fov := base_fov + (sprint_fov_boost if is_sprinting else 0.0)
+	var target_fov := Settings.fov + (sprint_fov_boost if is_sprinting else 0.0)
 	camera.fov = lerpf(camera.fov, target_fov, 1.0 - exp(-6.0 * delta))
 
 	_recoil = _recoil.lerp(Vector2.ZERO, 1.0 - exp(-9.0 * delta))

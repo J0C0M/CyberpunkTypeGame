@@ -10,6 +10,13 @@ func _ready() -> void:
 		if arg.begins_with("--out="):
 			_out = arg.trim_prefix("--out=")
 	get_tree().set_meta("screenshot_mode", true)
+	var character := CharacterData.new()
+	character.outfit = &"outfit_punk"
+	character.muscle = 0.7
+	character.hair_style = 3
+	character.hair_color = 6
+	character.tattoos.append({"design": &"dragon", "zone": &"upper_arm_r", "color": 5, "glow": true})
+	GameState.character = character
 	var main: Node = load("res://scenes/main.tscn").instantiate()
 	add_child(main)
 	for id: StringName in [&"noodles", &"sushi", &"synth_soda", &"volt_can", &"sake", &"med_patch", &"focus_stim", &"scrap", &"data_shard", &"lucky_cat", &"jade_koi", &"optic_lens", &"keycard_1107", &"ren_coupon", &"vinyl", &"onigiri", &"burnt_chip", &"deck_board", &"gold_lighter", &"neural_implant", &"reflex_wire"]:

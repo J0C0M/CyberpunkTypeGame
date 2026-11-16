@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Script" path="res://scripts/items/item_data.gd" id="1_item"]
+
+[resource]
+script = ExtResource("1_item")
+id = &"wear_tech_hoodie"
+display_name = "Techwear Hoodie"
+category = &"clothing"
+price = 160
+pack = 1
+stack_size = 1
+description = "Black hoodie with cyan straps and a big hood."
+inspect_text = "Water-shedding shell, magnetic pockets and two cyan straps that do nothing but look like they do."
+model = &"clothes"
+tint = Color(0.07, 0.07, 0.08, 1)
+wear_slot = &"jacket"
+wear_layer = 2
+droppable = false
+sellable = false
