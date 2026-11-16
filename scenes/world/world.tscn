@@ -1,0 +1,185 @@
+[gd_scene format=3]
+
+[ext_resource type="Environment" path="res://assets/environment/night_city_environment.tres" id="1_env"]
+[ext_resource type="PackedScene" path="res://scenes/player/player.tscn" id="2_player"]
+[ext_resource type="PackedScene" path="res://scenes/world/city.tscn" id="6_city"]
+[ext_resource type="PackedScene" path="res://scenes/world/skyline.tscn" id="7_skyline"]
+[ext_resource type="Script" path="res://scripts/world/flight_path.gd" id="8_flight"]
+[ext_resource type="PackedScene" path="res://scenes/actors/robot_dragon.tscn" id="9_dragon"]
+[ext_resource type="Script" path="res://scripts/actors/npc_crowd.gd" id="10_crowd"]
+[ext_resource type="PackedScene" path="res://scenes/actors/npc.tscn" id="11_npc"]
+[ext_resource type="Script" path="res://scripts/weapons/impact_effects.gd" id="12_impacts"]
+[ext_resource type="AudioStream" path="res://assets/audio/city_ambience.wav" id="14_ambience"]
+[ext_resource type="AudioStream" path="res://assets/audio/dragon_hum.wav" id="15_hum"]
+[ext_resource type="Script" path="res://scripts/combat/debris_pool.gd" id="16_debris"]
+[ext_resource type="Script" path="res://scripts/core/sfx_pool.gd" id="17_sfx"]
+[ext_resource type="Script" path="res://scripts/combat/explosions.gd" id="18_explosions"]
+[ext_resource type="Script" path="res://scripts/items/item_scatter.gd" id="19_scatter"]
+[ext_resource type="Script" path="res://scripts/actors/enemy_nav.gd" id="20_enemy_nav"]
+[ext_resource type="Script" path="res://scripts/actors/gang_turf.gd" id="21_turf"]
+[ext_resource type="PackedScene" path="res://scenes/actors/gang_member.tscn" id="22_gang"]
+[ext_resource type="Script" path="res://scripts/combat/police_dispatch.gd" id="23_police"]
+[ext_resource type="PackedScene" path="res://scenes/actors/police_drone.tscn" id="24_drone"]
+
+[node name="World" type="Node3D"]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = ExtResource("1_env")
+
+[node name="Moonlight" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.866025, 0.25, -0.433013, 0, 0.866025, 0.5, 0.5, -0.433013, 0.75, 0, 20, 0)
+light_color = Color(0.5, 0.58, 1, 1)
+light_energy = 0.12
+
+[node name="City" parent="." instance=ExtResource("6_city")]
+
+[node name="Skyline" parent="." instance=ExtResource("7_skyline")]
+
+[node name="Dragons" type="Node3D" parent="."]
+
+[node name="InnerLoop" type="Path3D" parent="Dragons"]
+script = ExtResource("8_flight")
+radius = Vector2(150, 125)
+altitude = 95.0
+altitude_variation = 20.0
+clearance = 25.0
+obstacle_sources = Array[NodePath]([NodePath("../../City"), NodePath("../../Skyline")])
+
+[node name="WeavingLoop" type="Path3D" parent="Dragons"]
+script = ExtResource("8_flight")
+center = Vector2(40, -60)
+radius = Vector2(430, 310)
+lobes = 3
+lobe_depth = 0.35
+altitude = 150.0
+altitude_variation = 40.0
+phase = 1.3
+obstacle_sources = Array[NodePath]([NodePath("../../City"), NodePath("../../Skyline")])
+
+[node name="OuterLoop" type="Path3D" parent="Dragons"]
+script = ExtResource("8_flight")
+radius = Vector2(900, 720)
+lobes = 2
+lobe_depth = 0.2
+altitude = 260.0
+altitude_variation = 60.0
+phase = 2.6
+obstacle_sources = Array[NodePath]([NodePath("../../Skyline")])
+
+[node name="MainStreetLoop" type="Path3D" parent="Dragons"]
+script = ExtResource("8_flight")
+waypoints = PackedVector2Array(-440, 0, -330, 0, -220, 0, -110, 0, 0, 0, 110, 0, 220, 0, 330, 0, 440, 0, 540, -110, 450, -230, 200, -260, -200, -260, -450, -230, -540, -110)
+altitude = 46.0
+altitude_variation = 6.0
+clearance = 25.0
+obstacle_radius = 8.0
+samples = 150
+obstacle_sources = Array[NodePath]([NodePath("../../City"), NodePath("../../Skyline")])
+
+[node name="CrossStreetLoop" type="Path3D" parent="Dragons"]
+script = ExtResource("8_flight")
+waypoints = PackedVector2Array(0, 440, 0, 330, 0, 220, 0, 110, 0, 0, 0, -110, 0, -220, 0, -330, 0, -440, 110, -540, 230, -450, 260, -200, 260, 200, 230, 450, 110, 540)
+altitude = 62.0
+altitude_variation = 6.0
+clearance = 25.0
+obstacle_radius = 8.0
+samples = 150
+phase = 0.7
+obstacle_sources = Array[NodePath]([NodePath("../../City"), NodePath("../../Skyline")])
+
+[node name="MainStreetDragon" parent="Dragons" instance=ExtResource("9_dragon")]
+hum = ExtResource("15_hum")
+flight_path = NodePath("../MainStreetLoop")
+speed = 30.0
+segment_count = 28
+body_scale = 1.25
+wave_amplitude = 1.3
+start_offset = 0.18
+head_light = true
+
+[node name="CrossStreetDragon" parent="Dragons" instance=ExtResource("9_dragon")]
+hum = ExtResource("15_hum")
+flight_path = NodePath("../CrossStreetLoop")
+speed = 27.0
+segment_count = 28
+body_scale = 1.25
+accent_color = Color(0.45, 1, 0.3, 1)
+eye_color = Color(1, 0.16, 0.62, 1)
+wave_amplitude = 1.3
+start_offset = 0.6
+head_light = true
+
+[node name="BlockDragon" parent="Dragons" instance=ExtResource("9_dragon")]
+hum = ExtResource("15_hum")
+flight_path = NodePath("../InnerLoop")
+speed = 26.0
+segment_count = 30
+body_scale = 2.0
+accent_color = Color(0.62, 0.28, 1, 1)
+eye_color = Color(1, 0.58, 0.12, 1)
+
+[node name="MagentaDragon" parent="Dragons" instance=ExtResource("9_dragon")]
+flight_path = NodePath("../WeavingLoop")
+speed = 32.0
+segment_count = 34
+segment_spacing = 4.0
+body_scale = 2.8
+accent_color = Color(1, 0.16, 0.62, 1)
+eye_color = Color(0.1, 0.88, 1, 1)
+start_offset = 0.4
+
+[node name="AmberDragon" parent="Dragons" instance=ExtResource("9_dragon")]
+flight_path = NodePath("../OuterLoop")
+speed = 40.0
+segment_count = 36
+segment_spacing = 4.4
+body_scale = 4.0
+accent_color = Color(1, 0.58, 0.12, 1)
+eye_color = Color(1, 0.1, 0.16, 1)
+wave_amplitude = 4.0
+start_offset = 0.7
+
+[node name="Crowd" type="Node3D" parent="."]
+script = ExtResource("10_crowd")
+city = NodePath("../City")
+npc_scene = ExtResource("11_npc")
+
+[node name="NavigationRegion3D" type="NavigationRegion3D" parent="Crowd"]
+
+[node name="EnemyNav" type="NavigationRegion3D" parent="."]
+script = ExtResource("20_enemy_nav")
+geometry_root = NodePath("..")
+
+[node name="JackalTurf" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -56, 0, 0)
+script = ExtResource("21_turf")
+member_scene = ExtResource("22_gang")
+nav = NodePath("../EnemyNav")
+
+[node name="PoliceDispatch" type="Node3D" parent="."]
+script = ExtResource("23_police")
+drone_scene = ExtResource("24_drone")
+
+[node name="ImpactEffects" type="Node3D" parent="."]
+script = ExtResource("12_impacts")
+
+[node name="DebrisPool" type="Node3D" parent="."]
+script = ExtResource("16_debris")
+
+[node name="SfxPool" type="Node3D" parent="."]
+script = ExtResource("17_sfx")
+
+[node name="Explosions" type="Node3D" parent="."]
+script = ExtResource("18_explosions")
+
+[node name="ItemScatter" type="Node3D" parent="."]
+script = ExtResource("19_scatter")
+
+[node name="CityAmbience" type="AudioStreamPlayer" parent="."]
+stream = ExtResource("14_ambience")
+volume_db = -12.0
+bus = &"Ambience"
+autoplay = true
+
+[node name="Player" parent="." instance=ExtResource("2_player")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 13.5, 0.15, -11.6)

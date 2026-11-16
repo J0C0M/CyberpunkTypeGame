@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Script" path="res://scripts/items/item_data.gd" id="1_item"]
+
+[resource]
+script = ExtResource("1_item")
+id = &"noodles"
+display_name = "Neon Ramen Bowl"
+category = &"food"
+price = 18
+pack = 1
+stack_size = 10
+description = "Synth-pork broth. Glows faintly."
+inspect_text = "The broth has been simmering since noon. The glow is a food dye. Probably."
+model = &"bowl"
+tint = Color(1.0, 0.35, 0.62, 1)
+effect = &"sprint"
+effect_strength = 0.12
+effect_duration = 90.0
+heal = 15.0
+use_verb = "Eat"
+effect_label = "WARM BELLY"

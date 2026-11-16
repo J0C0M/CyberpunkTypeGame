@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Script" path="res://scripts/items/item_data.gd" id="1_item"]
+
+[resource]
+script = ExtResource("1_item")
+id = &"keycard_1107"
+display_name = "Key Card 1107"
+category = &"key"
+price = 0
+pack = 1
+stack_size = 1
+description = "Opens apartment 1107 at Neo-Heights."
+inspect_text = "A purple Neo-Heights key card. Ren had it behind the counter: the landlord left it there with a note that just says 'rent paid'."
+model = &"keycard"
+tint = Color(0.62, 0.28, 1.0, 1)
+droppable = false
+sellable = false

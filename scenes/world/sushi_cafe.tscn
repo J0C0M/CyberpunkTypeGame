@@ -1,0 +1,26 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/world/sushi_cafe.gd" id="1_cafe"]
+[ext_resource type="AudioStream" path="res://assets/audio/neon_buzz.wav" id="2_buzz"]
+[ext_resource type="PackedScene" path="res://scenes/actors/merchant.tscn" id="3_merchant"]
+
+[node name="SushiCafe" type="Node3D"]
+script = ExtResource("1_cafe")
+
+[node name="Chef" parent="." instance=ExtResource("3_merchant")]
+transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, 0, 0.15, -9.3)
+merchant_id = &"hiro"
+display_name = "Chef Hiro"
+shop_name = "Sushi Kaiten"
+catalog = &"sushi"
+look_seed = 88
+greeting = "Fresh off the belt."
+
+[node name="SignBuzz" type="AudioStreamPlayer3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 4, 0.6)
+stream = ExtResource("2_buzz")
+volume_db = -14.0
+bus = &"Ambience"
+unit_size = 2.5
+max_distance = 18.0
+autoplay = true

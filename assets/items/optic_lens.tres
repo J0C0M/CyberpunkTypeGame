@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Script" path="res://scripts/items/item_data.gd" id="1_item"]
+
+[resource]
+script = ExtResource("1_item")
+id = &"optic_lens"
+display_name = "Optic Lens Mk.II"
+category = &"cyberware"
+price = 220
+pack = 1
+stack_size = 3
+description = "Low-light zoom. Fits most sockets."
+inspect_text = "A cybernetic eye lens in a sterile pouch. The iris clicks open when you tilt it."
+model = &"lens"

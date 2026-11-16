@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="ShopProfile" format=3]
+
+[ext_resource type="Script" path="res://scripts/items/shop_profile.gd" id="1_shop"]
+
+[resource]
+script = ExtResource("1_shop")
+stock = Dictionary[StringName, int]({&"sushi": 10, &"onigiri": 8, &"synth_soda": 12, &"sake": 4})
+credits = 500
+likes = Array[StringName]([&"food", &"drink"])
+markup = 1.2
+buyback = 0.45

@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="ShopProfile" format=3]
+
+[ext_resource type="Script" path="res://scripts/items/shop_profile.gd" id="1_shop"]
+
+[resource]
+script = ExtResource("1_shop")
+stock = Dictionary[StringName, int]({&"ammo_ks47": 900, &"ammo_9mm": 480, &"ammo_shells": 160, &"weapon_pistol": 2, &"weapon_shotgun": 1})
+credits = 1000
+likes = Array[StringName]([&"ammo", &"weapon", &"cyberware"])
+markup = 1.2
+buyback = 0.5
