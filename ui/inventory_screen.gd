@@ -16,6 +16,7 @@ const TABS := [
 	["AMMO", [&"ammo"]],
 	["FOOD & DRINK", [&"food", &"drink"]],
 	["MEDICAL", [&"medical"]],
+	["CLOTHING", [&"clothing"]],
 	["JUNK", [&"junk"]],
 	["VALUABLES", [&"valuable", &"cyberware"]],
 	["KEY ITEMS", [&"key"]],

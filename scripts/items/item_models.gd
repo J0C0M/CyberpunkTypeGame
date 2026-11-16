@@ -170,6 +170,11 @@ static func _add_shape(geo: GeoBatch, shape: StringName, tint: Color) -> void:
 				var lying := Transform3D(Basis(Vector3.FORWARD, PI * 0.5), Vector3(-0.03 + i * 0.022, 0.052, 0.0))
 				geo.add_cylinder(0.01, 0.01, 0.06, 8, lying, MatLib.surface(Color(0.75, 0.08, 0.1), 0.5, 0.0, 0.0))
 				geo.add_cylinder(0.0105, 0.0105, 0.012, 8, lying.translated_local(Vector3(0, 0.03, 0)), MatLib.surface(Color(0.85, 0.6, 0.2), 0.3, 0.9, 0.0))
+		&"clothes":
+			# A folded garment with a coloured trim.
+			geo.add_box_at(Vector3(0.22, 0.04, 0.16), Vector3(0, 0.02, 0), MatLib.surface(tint, 0.9, 0.0, 0.0))
+			geo.add_box_at(Vector3(0.2, 0.035, 0.14), Vector3(0.0, 0.055, -0.005), MatLib.surface(tint.lightened(0.12), 0.9, 0.0, 0.0))
+			geo.add_box_at(Vector3(0.21, 0.008, 0.02), Vector3(0, 0.074, -0.06), MatLib.neon(Palette.PINK, 2.0))
 		&"keycard":
 			geo.add_box_at(Vector3(0.086, 0.004, 0.054), Vector3(0, 0.002, 0), MatLib.surface(tint.darkened(0.3), 0.4, 0.2, 0.0))
 			geo.add_box_at(Vector3(0.086, 0.002, 0.01), Vector3(0, 0.0045, 0.015), MatLib.neon(tint, 3.0))

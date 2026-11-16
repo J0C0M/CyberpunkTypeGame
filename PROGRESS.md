@@ -8,7 +8,8 @@ Living status file so work can be picked up in a new session. Updated with every
 - `Build-Second-Prototype`: prototype 2 (merged into `Development`).
 - `Build-Third-Prototype`: prototype 3 = finishing prototype 2 + Part 1 (music); merged into `Development`.
 - `Build-Fourth-Prototype`: prototype 4; merged into `Development`.
-- Next: prototype 5 (not briefed yet; see the proposal in HANDOFF.md).
+- `Fix-Dialogue-Scroll`: scrolling dialogue choices; merged into `Development`.
+- `Build-Fifth-Prototype`: prototype 5 (in progress, see below).
 
 Commits are authored as J0C0M via one-off `git -c user.name=... -c user.email=...` flags
 (git config itself is empty on this machine). Godot 4.7.2 binary: `~/Downloads/Godot_v4.7.2-stable_linux.x86_64`.
@@ -101,3 +102,32 @@ User's combat direction (asked at the start): **street gang + police drones**, *
   - [x] Performance (`tests/perf_bench.tscn`: 1.3-1.6 ms average, worst 2.7 ms), UI at 4:3 and 21:9,
     walk-through test (`tests/test_world.tscn`), hallway end window/lining.
   - [x] Final re-tour of all viewpoints; merged into `Development`.
+
+## Prototype 5 (branch `Build-Fifth-Prototype`): in progress
+Brief: main menu, character creator, multi-character save slots, seeing your own character
+(first-person body, inventory paper doll, mirrors, photo booth, third person, lobby monitor, NPC
+comments) and preparation for prototype 6's clothing/armour. Order: model, creator, menu + saves,
+first person, paper doll, mirrors, small extras, p6 prep.
+
+- [x] Step 1: rigged player model (`scripts/character/`)
+  - `CharacterRig`: 18-bone Skeleton3D table, body regions (box per region with slim size, muscle
+    growth/shift and frame growth), attachment slots (BoneAttachment3D `Slot_<slot>`), wear slots and
+    `WearLayer` (UNDERWEAR, CLOTHING, OUTER, ARMOR with inflate offsets), first-person-hidden regions.
+  - `CharacterModel` (Node3D): builds skeleton + one skinned MeshInstance3D per region and layer
+    (`Skin_<region>`, `Wear_<region>`, `Hair`), body masks (fully covered skin hidden), muscle =
+    "muscle" blend shape (NORMALIZED mode!), frame/height rebuild the skeleton, `pose()` walk/run/aim/
+    crouch/breathing, `slot()`, `eye_height()`. Head/neck/hair/arms on render layer 3 (bit 4).
+  - `CharacterData` (Resource, to_dict/from_dict/randomize_look), `CharacterOptions` (all choices),
+    `CharacterAtlas` (fixed 512x512 layout, 160 px/m), `CharacterTexture` (skin, face, white heart
+    underpants, tattoos, glow map), `TattooDesigns` (8 invented pixel designs), `CharacterMeshBuilder`,
+    `Wearables` (15 clothing pieces) and `Outfits` (5 presets). Shader `shaders/character.gdshader`.
+  - 15 clothing items (`assets/items/wear_*.tres`, category "clothing", `wear_slot`/`wear_layer`),
+    CLOTHING tab in the inventory.
+  - Tests: `tests/test_character.tscn` (headless), `tests/shot_character.tscn` (lineup screenshots).
+- [ ] Step 2: character creator
+- [ ] Step 3: main menu, settings, save slots
+- [ ] Step 4: first-person arms, body, shadow
+- [ ] Step 5: inventory paper doll
+- [ ] Step 6: mirrors
+- [ ] Step 7: photo booth, third person, lobby monitor, NPC comments
+- [ ] Step 8: prototype 6 preparation, docs, merge

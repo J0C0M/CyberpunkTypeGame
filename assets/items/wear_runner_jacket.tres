@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Script" path="res://scripts/items/item_data.gd" id="1_item"]
+
+[resource]
+script = ExtResource("1_item")
+id = &"wear_runner_jacket"
+display_name = "Street-Runner Jacket"
+category = &"clothing"
+price = 120
+pack = 1
+stack_size = 1
+description = "Cropped jacket with a cyan zip light and amber collar."
+inspect_text = "Lined with something that might be kevlar and might be felt. The cyan strip down the front is a running light; couriers wear it so cars see them. Mostly."
+model = &"clothes"
+tint = Color(0.12, 0.1, 0.1, 1)
+wear_slot = &"jacket"
+wear_layer = 2
+droppable = false
+sellable = false

@@ -14,13 +14,14 @@ const CATEGORY_COLORS := {
 	&"junk": Color(0.6, 0.6, 0.65),
 	&"valuable": Color(1.0, 0.85, 0.2),
 	&"cyberware": Color(0.62, 0.28, 1.0),
+	&"clothing": Color(0.95, 0.55, 0.85),
 	&"key": Color(0.75, 0.88, 1.0),
 }
 ## Sort order in lists and the inventory grid.
-const CATEGORY_ORDER: Array[StringName] = [&"weapon", &"ammo", &"medical", &"food", &"drink", &"junk", &"valuable", &"cyberware", &"key"]
+const CATEGORY_ORDER: Array[StringName] = [&"weapon", &"ammo", &"medical", &"food", &"drink", &"clothing", &"junk", &"valuable", &"cyberware", &"key"]
 const CATEGORY_NAMES := {
 	&"weapon": "Weapon", &"ammo": "Ammo", &"food": "Food", &"drink": "Drink", &"medical": "Medical",
-	&"junk": "Junk", &"valuable": "Valuable", &"cyberware": "Cyberware", &"key": "Key item",
+	&"junk": "Junk", &"valuable": "Valuable", &"cyberware": "Cyberware", &"clothing": "Clothing", &"key": "Key item",
 }
 
 static var _items := {}
