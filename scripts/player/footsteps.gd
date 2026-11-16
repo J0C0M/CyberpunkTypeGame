@@ -39,6 +39,7 @@ func _ready() -> void:
 	_landings = [load("res://assets/audio/footsteps/land_1.wav"), load("res://assets/audio/footsteps/land_2.wav")]
 	_audio = AudioStreamPlayer.new()
 	_audio.max_polyphony = 3
+	_audio.bus = &"SFX"
 	add_child(_audio)
 
 

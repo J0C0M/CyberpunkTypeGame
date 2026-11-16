@@ -31,11 +31,14 @@ omni_range = 1.6
 stream = ExtResource("3_shot")
 volume_db = -6.0
 max_polyphony = 4
+bus = &"SFX"
 
 [node name="ReloadSound" type="AudioStreamPlayer" parent="."]
 stream = ExtResource("4_reload")
 volume_db = -4.0
+bus = &"SFX"
 
 [node name="DryFireSound" type="AudioStreamPlayer" parent="."]
 stream = ExtResource("5_dry")
 volume_db = -6.0
+bus = &"SFX"

@@ -29,7 +29,7 @@ The renderer is Forward+ (Vulkan). You spawn inside a sushi cafe; walk out onto 
 | Shoot (full auto) | Left mouse button |
 | Reload | R |
 | Interact (talk, trade, doors, elevator, bed, couch, pick up) | E |
-| Free / capture the mouse, leave menus | Esc (clicking the game also captures it) |
+| Pause menu (volumes, mouse sensitivity, quit), leave menus | Esc (clicking the game captures the mouse) |
 | Change TV channel (while seated) | A / D |
 | Dialogue choices | 1-8 or click |
 | Toggle PS1 vertex wobble | F2 |
@@ -62,6 +62,9 @@ it by the box at Iron Lotus Arms.
   your reputation. They cower and refuse to trade after violence.
 - **Ren, the guide:** dialogue with choices, tips, shop explanations and HUD waypoints. Can't be killed.
 - **Footsteps:** per surface (concrete, wet puddles, metal, wood, tile), distance-timed and soft.
+- **Music (prototype 3):** generated ambient street soundtrack, elevator muzak and a track per shop played from
+  in-world speakers (muffled from outside, clear inside), an apartment radio, ducking during dialogue/TV and a
+  muffle after gunfire. Audio buses Master/Music/SFX/Ambience/UI with sliders in the pause menu.
 - **Neo-Heights:** a lobby with a doorman robot, an elevator to the 11th floor, a hallway and the
   player's apartment 1107. Sleep in the bed to skip six hours (the city repairs itself, merchants
   restock, bodies and loot are cleared), sit on the couch to watch four invented TV channels, grab

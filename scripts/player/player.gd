@@ -50,8 +50,9 @@ func _ready() -> void:
 
 ## Mouse look; called by Main for every captured mouse motion event.
 func look(relative: Vector2) -> void:
-	rotate_y(-relative.x * mouse_sensitivity)
-	head.rotation.x = clampf(head.rotation.x - relative.y * mouse_sensitivity, deg_to_rad(-88.0), deg_to_rad(88.0))
+	var sensitivity := Settings.mouse_sensitivity
+	rotate_y(-relative.x * sensitivity)
+	head.rotation.x = clampf(head.rotation.x - relative.y * sensitivity, deg_to_rad(-88.0), deg_to_rad(88.0))
 
 
 ## Called by the weapon on every shot. Part of the kick stays (the view climbs), the rest springs back.

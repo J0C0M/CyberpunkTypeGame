@@ -120,6 +120,7 @@ func _build_body(root: Node3D) -> void:
 		engine.max_distance = 320.0
 		engine.volume_db = -4.0
 		engine.autoplay = true
+		engine.bus = &"Ambience"
 		_head.add_child(engine)
 	_jaw = Node3D.new()
 	_jaw.name = "Jaw"
