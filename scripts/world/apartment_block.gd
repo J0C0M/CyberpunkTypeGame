@@ -642,6 +642,9 @@ func _sit(player: Player) -> void:
 	camera.top_level = true
 	camera.global_transform = _seat_return
 	player.weapon_holder.visible = false
+	# The camera leaves the body standing by the couch; don't let it see itself.
+	if player.body:
+		player.body.visible = false
 	var eye := to_global(Vector3(5.8, UPPER_Y + 1.15, -5.6))
 	var view := Transform3D(Basis.looking_at(_tv.global_position - eye, Vector3.UP), eye)
 	_seat_view = view
@@ -677,6 +680,8 @@ func _on_seated_player_died(_hit: HitInfo) -> void:
 	player.camera.top_level = false
 	player.camera.transform = Transform3D.IDENTITY
 	player.weapon_holder.visible = true
+	if player.body:
+		player.body.visible = true
 
 
 func _stand_up() -> void:
@@ -690,6 +695,8 @@ func _stand_up() -> void:
 	camera.top_level = false
 	camera.transform = Transform3D.IDENTITY
 	player.weapon_holder.visible = true
+	if player.body:
+		player.body.visible = true
 	GameState.release_ui()
 
 

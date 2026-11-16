@@ -43,6 +43,8 @@ var _material: ShaderMaterial
 var _parts: Array[MeshInstance3D] = []
 var _bones := {}
 var _slots := {}
+## While building standalone parts (part_mesh): boxes centred on their region.
+var _local_parts := false
 
 
 func _ready() -> void:
@@ -165,6 +167,30 @@ func _rotate(bone: StringName, euler: Vector3) -> void:
 
 # --- Building ---------------------------------------------------------------------------------
 
+## The skin or the clothing of one region as a mesh of its own, centred on the region (not skinned;
+## the "muscle" blend shape still works). The first-person arms are built from these.
+func part_mesh(region: StringName, clothing: bool) -> ArrayMesh:
+	var builder := CharacterMeshBuilder.new()
+	_local_parts = true
+	if clothing:
+		for id in worn:
+			_add_wearable(builder, Wearables.piece(id), region)
+	else:
+		_add_region_box(builder, region, 0.0, 1.0, region)
+	_local_parts = false
+	return builder.build(false)
+
+
+## Whether a region's skin is hidden under clothing.
+func is_covered(region: StringName) -> bool:
+	return Wearables.covered_regions(worn).has(region)
+
+
+## The material with this character's textures (shared by every part).
+func material() -> ShaderMaterial:
+	return _material
+
+
 ## Rest-pose centre and size (slim and muscular) of a region's box, inflated by `inflate`.
 ## `share` covers only part of it: 0.4 = the top 40 %, -0.4 = the bottom 40 %.
 func _region_box(region: StringName, inflate: float, share: float) -> Array:
@@ -174,6 +200,9 @@ func _region_box(region: StringName, inflate: float, share: float) -> Array:
 	var size: Vector3 = CharacterRig.region_size(region, data.frame, data.head_shape) + Vector3.ONE * inflate * 2.0
 	var muscle_size: Vector3 = size + info["muscle"]
 	var muscle_center: Vector3 = center + info["shift"]
+	if _local_parts:
+		center = Vector3.ZERO
+		muscle_center = Vector3.ZERO
 	if share < 1.0:
 		var top := share > 0.0
 		var amount := absf(share)

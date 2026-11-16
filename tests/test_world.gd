@@ -20,6 +20,18 @@ func _ready() -> void:
 		if node is ApartmentBlock:
 			block = node
 
+	# The player's own body in first person.
+	_check(_player.body != null and _player.body.visible, "the player has a body")
+	_check(_player.camera.cull_mask & CharacterRig.FIRST_PERSON_HIDDEN == 0, "the first-person camera leaves out the head and arms")
+	_check(absf(_player.head.position.y - _player.body.eye_height()) < 0.001, "the camera sits at the character's eye height")
+	var arms := _player.weapon_holder.get_node_or_null("ViewArms") as ViewArms
+	await get_tree().process_frame
+	_check(arms != null and arms.visible and arms.get_child_count() == 6, "first-person arms hold the gun")
+	var gun_in_hand := _player.body.slot(&"hand_r").get_child(0) as MeshInstance3D
+	_check(gun_in_hand != null and gun_in_hand.layers == CharacterRig.FIRST_PERSON_HIDDEN, "the body holds the gun too, hidden from first person")
+	var shadows := get_tree().root.find_children("*", "Light3D", true, false).filter(func(l: Light3D) -> bool: return l.shadow_enabled)
+	_check(shadows.size() >= 1, "lights near the player cast shadows (%d)" % shadows.size())
+
 	# Out of the noodle bar onto the street (the shop front faces +Z).
 	var start := _player.global_position
 	await _walk(Vector3(0, 0, 1), 3.0)

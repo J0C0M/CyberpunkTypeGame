@@ -41,6 +41,8 @@ signal died(hit: HitInfo)
 @export var death_penalty_cap := 150
 
 const HURT_SOUND := preload("res://assets/audio/player_hurt.wav")
+## How far behind the camera the body stands.
+const BODY_SETBACK := 0.13
 const FLATLINE_SOUND := preload("res://assets/audio/flatline.wav")
 ## Healing items H uses, best first.
 const QUICK_HEAL: Array[StringName] = [&"med_patch", &"sushi", &"noodles", &"onigiri"]
@@ -60,6 +62,8 @@ var health: Damageable
 var is_dead := false
 ## Who the player is (look, outfit); see apply_character().
 var character: CharacterData
+## The character's body (CharacterModel) and first-person arms (ViewArms).
+var body: CharacterModel
 var is_sprinting := false
 ## The Interactable under the crosshair within reach, or null. The HUD shows its prompt.
 var focused_interactable: Interactable
@@ -77,6 +81,9 @@ var _since_hurt := 0.0
 var _hurt_audio: AudioStreamPlayer
 ## Where the player started (Ren's noodle bar): the respawn point without a key card.
 var _start := Transform3D.IDENTITY
+var _arms: ViewArms
+var _body_time := 0.0
+var _body_aim := 0.0
 
 
 func _ready() -> void:
@@ -92,6 +99,7 @@ func _ready() -> void:
 	Damageable.register(self, health, &"body")
 	health.damaged.connect(_on_damaged)
 	health.died.connect(_on_died)
+	weapon_holder.weapon_changed.connect(_show_weapon_on_body)
 	_hurt_audio = AudioStreamPlayer.new()
 	_hurt_audio.stream = HURT_SOUND
 	_hurt_audio.bus = &"SFX"
@@ -166,7 +174,7 @@ func _flatline() -> void:
 	velocity = Vector3.ZERO
 	_knockback = Vector3.ZERO
 	head.rotation = Vector3.ZERO
-	head.position.y = 1.62
+	head.position.y = body.eye_height() if body else 1.62
 	weapon_holder.visible = true
 	restore_health()
 	hud.show_flatline(false)
@@ -235,6 +243,7 @@ func apply_knockback(impulse: Vector3) -> void:
 func _physics_process(delta: float) -> void:
 	_stick_look(delta)
 	_update_health(delta)
+	_animate_body(delta)
 	if is_dead:
 		_update_camera_effects(delta)
 		return
@@ -267,9 +276,56 @@ func _physics_process(delta: float) -> void:
 	_update_camera_effects(delta)
 
 
-## Takes on a character's look (the first-person body comes in with CharacterModel).
+## Takes on a character's look: the body (seen when looking down, in mirrors and in shadows),
+## the first-person arms, and the camera at the character's eye height.
 func apply_character(data: CharacterData) -> void:
 	character = data
+	if body:
+		body.queue_free()
+	body = CharacterModel.new()
+	body.name = "Body"
+	body.data = data
+	# A little behind the camera, so looking down shows the chest and legs, not the inside of the head.
+	body.position = Vector3(0, 0, BODY_SETBACK)
+	add_child(body)
+	head.position.y = body.eye_height()
+	camera.cull_mask &= ~CharacterRig.FIRST_PERSON_HIDDEN
+	if _arms == null:
+		_arms = ViewArms.new()
+		_arms.name = "ViewArms"
+		_arms.holder = weapon_holder
+		weapon_holder.add_child(_arms)
+	_arms.build(body)
+	_show_weapon_on_body(weapon)
+
+
+## The gun in hand also hangs in the body's right hand (for mirrors, shadows, third person).
+func _show_weapon_on_body(gun: Firearm) -> void:
+	if body == null:
+		return
+	var mount := body.slot(&"hand_r")
+	for child in mount.get_children():
+		child.queue_free()
+	if gun:
+		var model := ItemModels.build(gun.item_id)
+		# Barrel (+X) along the hand (bone -Y), top of the gun up when the arm points forward.
+		model.transform = Transform3D(Basis(Vector3(0, -1, 0), Vector3(0, 0, -1), Vector3(1, 0, 0)), Vector3(0, -0.02, 0.0))
+		# Like the arm holding it: seen in mirrors and third person, not by the first-person camera.
+		model.layers = CharacterRig.FIRST_PERSON_HIDDEN
+		mount.add_child(model)
+
+
+## Walks the body with the footsteps; the right arm holds the gun up.
+func _animate_body(delta: float) -> void:
+	if body == null:
+		return
+	_body_time += delta
+	var speed := Vector2(velocity.x, velocity.z).length() if is_on_floor() else 0.0
+	var walk := clampf(speed / walk_speed, 0.0, 1.2)
+	var run := clampf((speed - walk_speed) / (sprint_speed - walk_speed), 0.0, 1.0)
+	var aim := 1.0 if weapon and not is_sprinting else 0.0
+	_body_aim = move_toward(_body_aim, aim, delta * 4.0)
+	body.pose(footsteps.phase, walk, run, _body_aim, 0.0, _body_time)
 
 
 func save_data() -> Dictionary:

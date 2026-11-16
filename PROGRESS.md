@@ -150,7 +150,17 @@ first person, paper doll, mirrors, small extras, p6 prep.
   - Tests: `tests/test_save.tscn` (slots, characters, delete, migration; uses user://test_saves),
     `tests/test_flow.tscn` (menu -> creator -> game -> menu -> continue), `tests/shot_menu.tscn`.
   - Fixed: HUD lambdas on GameState signals outlived the HUD across scene changes (now methods).
-- [ ] Step 4: first-person arms, body, shadow
+- [x] Step 4: first-person arms, body, shadow
+  - `Player.apply_character(data)`: a `CharacterModel` body 0.13 m behind the camera (looking down shows the
+    chest and legs), camera at `eye_height()`, camera cull mask without render layer 3 (head, neck, hair,
+    arms: still cast shadows and show in mirrors), walk/run/aim poses from the footsteps, the gun in hand
+    as an item model in `Slot_hand_r` (layer 3). Body hidden while seated on the couch.
+  - `ViewArms` (`scripts/character/view_arms.gd`, child of the WeaponHolder, render layer 2): hands,
+    forearms and upper arms from `CharacterModel.part_mesh()` (same skin, tattoos, glow, muscle, sleeves,
+    gloves), placed on the gun models' `right_hand`/`left_hand` markers with two-bone IK to fixed shoulder
+    points; drawn 1.25x like most shooters. Gun view models lost their baked gloves and sleeves.
+  - `ShadowLights` (world.tscn): every 0.5 s the 3 nearest bright lights get shadows.
+  - Shots: `tests/shot_firstperson.tscn`; checks in `tests/test_world.tscn`.
 - [ ] Step 5: inventory paper doll
 - [ ] Step 6: mirrors
 - [ ] Step 7: photo booth, third person, lobby monitor, NPC comments
