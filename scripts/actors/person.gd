@@ -1,8 +1,9 @@
 class_name Person
 extends CharacterBody3D
 ## Shared base for the people in the city (pedestrians, merchants): health with a body and a
-## head hit zone, hit reactions, a stylised collapse when killed and bodies that despawn.
-## Subclasses decide how a person moves; check `is_dead` before doing anything.
+## head hit zone, hit reactions, a stylised collapse when killed, bodies that despawn, and a
+## panic timer fed by EventBus danger events (bigger, closer danger = longer panic).
+## Subclasses decide how a person moves and panics; check `is_dead` before doing anything.
 
 signal killed(hit: HitInfo)
 ## The body is gone (sunk away after its time was up, or replaced by a newer body).
@@ -27,6 +28,10 @@ static var _bodies: Array[Person] = []
 
 var health: Damageable
 var is_dead := false
+## Seconds of panic left; 0 when calm.
+var panic_time := 0.0
+## Where the most recent danger came from.
+var panic_origin := Vector3.ZERO
 ## 0..1, how far the model is crouched with its arms over its head this frame.
 var cower_amount := 0.0
 
@@ -36,6 +41,7 @@ var _death_time := 0.0
 var _fall_axis := Vector3.RIGHT
 var _flinch := 0.0
 var _sinking := -1.0
+var _body_alarm := 0.0
 
 
 func _ready() -> void:
@@ -59,6 +65,7 @@ func _ready() -> void:
 	Damageable.register(_head, health, &"head", headshot_multiplier)
 	health.damaged.connect(_on_damaged)
 	health.died.connect(_on_died)
+	EventBus.danger.connect(_on_danger)
 	tree_exiting.connect(func() -> void: _bodies.erase(self))
 
 
@@ -66,6 +73,10 @@ func _process(delta: float) -> void:
 	if is_dead:
 		_update_body(delta)
 		return
+	if panic_time > 0.0:
+		panic_time -= delta
+		if panic_time <= 0.0:
+			_on_calmed()
 	_flinch = move_toward(_flinch, 0.0, delta * 5.0)
 	model.rotation.x = -_flinch * 0.3
 	_head_shape.position.y = HEAD_HEIGHT - cower_amount * 0.42
@@ -79,8 +90,38 @@ func _on_damaged(hit: HitInfo) -> void:
 	_on_hurt(hit)
 
 
-## Called on every hit while alive (after effects). Subclasses react here (panic, anger...).
-func _on_hurt(_hit: HitInfo) -> void:
+## Called on every hit while alive (after effects). Being shot is as alarming as a death.
+func _on_hurt(hit: HitInfo) -> void:
+	var origin := (hit.source as Node3D).global_position if hit.source is Node3D else hit.position
+	_alarm(origin, EventBus.SEVERITY_DEATH, 1.0)
+
+
+func is_panicking() -> bool:
+	return panic_time > 0.0
+
+
+func _on_danger(position: Vector3, radius: float, severity: float, _source: Node) -> void:
+	if is_dead:
+		return
+	var distance := global_position.distance_to(position)
+	if distance <= radius:
+		_alarm(position, severity, 1.0 - distance / radius)
+
+
+func _alarm(origin: Vector3, severity: float, closeness: float) -> void:
+	var was_calm := panic_time <= 0.0
+	panic_time = maxf(panic_time, (3.0 + 6.0 * severity) * (0.7 + 0.6 * closeness))
+	panic_origin = origin
+	_on_danger_noticed(origin, severity, was_calm)
+
+
+## A danger event reached this person (they are now panicking). Subclasses pick a reaction.
+func _on_danger_noticed(_origin: Vector3, _severity: float, _was_calm: bool) -> void:
+	pass
+
+
+## Panic ran out without new danger.
+func _on_calmed() -> void:
 	pass
 
 
@@ -115,6 +156,11 @@ func _update_body(delta: float) -> void:
 		angle -= sin(minf(after / 0.25, 1.0) * PI) * 0.12 * exp(-after * 3.0)
 	model.transform = Transform3D(Basis(_fall_axis, angle), Vector3(0.0, 0.14 * t, 0.0))
 	model.pose(0.0, 0.0, 0.0, 0.0, t)
+	# A body keeps scaring anyone who walks past it.
+	_body_alarm -= delta
+	if _body_alarm <= 0.0 and _sinking < 0.0:
+		_body_alarm = 2.5
+		EventBus.emit_danger(global_position, 7.0, EventBus.SEVERITY_SHOT)
 	if t >= 1.0 and _death_time - delta < FALL_TIME:
 		SfxPool.play_at(self, FALL_SOUND, global_position, -4.0, 0.1, 5.0)
 		ImpactEffects.spawn_stain_at(self, global_position + model.global_basis.y * 0.6 + Vector3.UP * 0.05)
