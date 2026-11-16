@@ -219,6 +219,54 @@ def body_fall(rng):
     return normalize(mix(impact, thud, rustle, second), 0.65)
 
 
+def metal_ping(rng, freqs, decay, length):
+    n = seconds(length)
+    ring = [sum(math.sin(2 * math.pi * f * i / SAMPLE_RATE) * a for f, a in freqs) * math.exp(-(i / SAMPLE_RATE) / decay) for i in range(n)]
+    tick = [s * e for s, e in zip(highpass(noise(n, rng), 2000), envelope(n, 0.0005, 0.006))]
+    return mix(ring, tick)
+
+
+def prop_hit_metal(rng):
+    return normalize(metal_ping(rng, [(1350, 0.6), (2230, 0.35), (3900, 0.2)], 0.06, 0.3), 0.6)
+
+
+def prop_hit_wood(rng):
+    n = seconds(0.15)
+    knock = [s * e for s, e in zip(lowpass(noise(n, rng), 1200), envelope(n, 0.001, 0.02))]
+    tone = [math.sin(2 * math.pi * 320 * i / SAMPLE_RATE) * math.exp(-(i / SAMPLE_RATE) / 0.03) * 0.5 for i in range(n)]
+    return normalize(mix(knock, tone), 0.55)
+
+
+def prop_break_metal(rng):
+    crunch = [s * e for s, e in zip(lowpass(noise(seconds(0.9), rng), 2500), envelope(seconds(0.9), 0.002, 0.12))]
+    clangs = [place(metal_ping(rng, [(rng.uniform(600, 1800), 0.6), (rng.uniform(2000, 3500), 0.3)], 0.12, 0.5), rng.uniform(0.0, 0.45), 1.0) for _ in range(4)]
+    return normalize(soft_clip(mix(crunch, *clangs), 1.4), 0.75)
+
+
+def prop_break_wood(rng):
+    n = seconds(0.7)
+    crack = [s * e for s, e in zip(highpass(lowpass(noise(n, rng), 3500), 300), envelope(n, 0.001, 0.05))]
+    splinters = [place([v * 0.5 for v in lowpass(noise(seconds(0.08), rng), 2500)], rng.uniform(0.03, 0.4), 0.7) for _ in range(6)]
+    return normalize(mix(crack, *splinters), 0.7)
+
+
+def prop_break_concrete(rng):
+    n = seconds(1.0)
+    rumble = [s * e for s, e in zip(lowpass(noise(n, rng), 700), envelope(n, 0.003, 0.15))]
+    bits = [place([v * 0.3 for v in lowpass(noise(seconds(0.05), rng), 1800)], rng.uniform(0.1, 0.8), 1.0) for _ in range(10)]
+    return normalize(mix(rumble, *bits), 0.7)
+
+
+def spark_zap(rng):
+    n = seconds(0.25)
+    out = []
+    for i in range(n):
+        t = i / SAMPLE_RATE
+        buzz = math.sin(2 * math.pi * 120 * t) * (1 if rng.random() < 0.6 else -1)
+        out.append(buzz * math.exp(-t / 0.06) * (0.5 + 0.5 * rng.random()))
+    return normalize(lowpass(mix(out, [s * 0.4 for s in highpass(noise(n, rng), 3000)]), 6000), 0.5)
+
+
 def main():
     rng = random.Random(2077)
     write("rifle_shot.wav", rifle_shot(rng))
@@ -232,6 +280,12 @@ def main():
     write("glass_shatter_2.wav", glass_shatter(rng))
     write("body_hit.wav", body_hit(rng))
     write("body_fall.wav", body_fall(rng))
+    write("prop_hit_metal.wav", prop_hit_metal(rng))
+    write("prop_hit_wood.wav", prop_hit_wood(rng))
+    write("prop_break_metal.wav", prop_break_metal(rng))
+    write("prop_break_wood.wav", prop_break_wood(rng))
+    write("prop_break_concrete.wav", prop_break_concrete(rng))
+    write("spark_zap.wav", spark_zap(rng))
 
 
 if __name__ == "__main__":

@@ -36,6 +36,8 @@ const BLADE_NAMES := ["BAR", "HOTEL", "CLUB", "ZEN", "KOI", "LOVE", "DOJO", "ラ
 var walkable_faces := PackedVector3Array()
 ## [Rect2 footprint on the XZ plane, top height] for every building (see max_height_in).
 var _footprints: Array = []
+## Sidewalk areas (XZ) that street clutter must leave free, like shop entrances and bus stops.
+var _keep_clear: Array[Rect2] = []
 
 var _rng := RandomNumberGenerator.new()
 var _root: Node3D
@@ -56,6 +58,7 @@ func build() -> void:
 	BuildKit.clear_generated(self)
 	walkable_faces = PackedVector3Array()
 	_footprints.clear()
+	_keep_clear = [Rect2(cafe_lot.x - 1.0, -SIDEWALK_OUTER, cafe_lot.y - cafe_lot.x + 2.0, SIDEWALK_OUTER - ROAD_HALF)]
 	_rng.seed = city_seed
 	_root = BuildKit.generated_root(self, "Generated")
 	_body = BuildKit.static_body(_root, "Collision")
@@ -78,6 +81,9 @@ func build() -> void:
 		index += 1
 	_build_street_lamps()
 	_build_corner_props()
+	_build_bus_stops()
+	_build_street_signs()
+	_build_roadworks()
 	_build_sidewalk_clutter()
 	_build_parked_cars()
 	_build_cables()
@@ -472,17 +478,22 @@ func _build_street_lamps() -> void:
 		t += 18.0
 
 
+## Lamps in the playable area light the street and can be shot until they snap over and go dark.
 func _street_lamp(pos: Vector3, toward_road: Vector3, metal: Material, light_color: Color, lit: bool) -> void:
-	_props.add_cylinder(0.1, 0.07, 6.6, 6, Transform3D(Basis.IDENTITY, pos + Vector3.UP * 3.3), metal)
-	var arm_end := pos + Vector3.UP * 6.5 + toward_road * 1.9
-	_props.add_bar(pos + Vector3.UP * 6.5, arm_end, 0.1, metal)
+	var geo := GeoBatch.new() if lit else _props
+	var origin := Vector3.ZERO if lit else pos
+	geo.add_cylinder(0.1, 0.07, 6.6, 6, Transform3D(Basis.IDENTITY, origin + Vector3.UP * 3.3), metal)
+	var arm_end := origin + Vector3.UP * 6.5 + toward_road * 1.9
+	geo.add_bar(origin + Vector3.UP * 6.5, arm_end, 0.1, metal)
 	var head_size := Vector3(0.9, 0.16, 0.4) if absf(toward_road.x) > 0.5 else Vector3(0.4, 0.16, 0.9)
-	_props.add_box_at(head_size, arm_end, metal)
+	geo.add_box_at(head_size, arm_end, metal)
 	var flicker := 0.25 if _rng.randf() < 0.12 else 0.0
-	_props.add_box_at(head_size * Vector3(0.85, 0.3, 0.75), arm_end - Vector3.UP * 0.09, MatLib.neon(light_color, 5.0, flicker, 0.0, _rng.randf()))
+	geo.add_box_at(head_size * Vector3(0.85, 0.3, 0.75), arm_end - Vector3.UP * 0.09, MatLib.neon(light_color, 5.0, flicker, 0.0, _rng.randf()))
 	if lit:
-		BuildKit.down_spot(_lights, arm_end - Vector3.UP * 0.2, light_color, 3.5, 13.0, 55.0)
-		BuildKit.box_collider_at(_body, Vector3(0.25, 6.6, 0.25), pos + Vector3.UP * 3.3)
+		var lamp := _prop(Transform3D(Basis.IDENTITY, pos), geo, [[Vector3(0.25, 6.6, 0.25), Transform3D(Basis.IDENTITY, Vector3.UP * 3.3)]], 90.0, BreakableProp.Kind.METAL, Vector3(0.4, 6.6, 0.4), PackedColorArray([Palette.METAL_DARK, light_color]))
+		lamp.keep_wreck = true
+		lamp.electrical = true
+		lamp.add_light(BuildKit.down_spot(lamp.visual, arm_end - Vector3.UP * 0.2, light_color, 3.5, 13.0, 55.0))
 
 
 func _build_corner_props() -> void:
@@ -519,46 +530,183 @@ func _build_corner_props() -> void:
 	BuildKit.box_collider_at(_body, Vector3(1.0, 3.6, 1.0), column + Vector3.UP * 1.8)
 
 
+## Random street clutter along the building side of the sidewalks, clear of shop entrances.
 func _build_sidewalk_clutter() -> void:
-	var bin := MatLib.surface(Color(0.1, 0.18, 0.14), 0.6, 0.3)
 	var bag := MatLib.surface(Color(0.03, 0.03, 0.035), 0.3)
-	var placed := 0
+	var placed: Array[Vector3] = []
 	var attempts := 0
-	while placed < 16 and attempts < 200:
+	while placed.size() < 30 and attempts < 500:
 		attempts += 1
 		var along := _rng.randf_range(12.0, PLAY_LIMIT - 4.0) * (1.0 if _rng.randf() < 0.5 else -1.0)
 		var side := 1.0 if _rng.randf() < 0.5 else -1.0
 		var on_main := _rng.randf() < 0.6
 		var pos := Vector3(along, CURB_HEIGHT, side * (SIDEWALK_OUTER - 0.55)) if on_main else Vector3(side * (SIDEWALK_OUTER - 0.55), CURB_HEIGHT, along)
-		# Keep the cafe front clear.
-		if pos.z < 0.0 and pos.x > cafe_lot.x - 1.0 and pos.x < cafe_lot.y + 1.0 and absf(pos.z) > SIDEWALK_OUTER - 1.0:
+		var facing := Vector3(0, 0, -side) if on_main else Vector3(-side, 0, 0)
+		if _is_blocked(pos, placed, 2.4):
 			continue
+		placed.append(pos)
 		var roll := _rng.randf()
-		if roll < 0.3:
-			_vending_machine(pos, Vector3(0, 0, -side) if on_main else Vector3(-side, 0, 0))
-		elif roll < 0.6:
-			_props.add_cylinder(0.32, 0.3, 0.95, 8, Transform3D(Basis.IDENTITY, pos + Vector3.UP * 0.475), bin)
-			BuildKit.box_collider_at(_body, Vector3(0.6, 0.95, 0.6), pos + Vector3.UP * 0.475)
-		else:
+		if roll < 0.17:
+			_vending_machine(pos, facing)
+		elif roll < 0.36:
+			_trash_bin(pos)
+		elif roll < 0.48:
 			for i in _rng.randi_range(2, 4):
 				var offset := Vector3(_rng.randf_range(-0.5, 0.5), 0, _rng.randf_range(-0.3, 0.3))
 				_props.add_sphere(0.32, Transform3D(Basis.from_scale(Vector3(1.0, 0.75, 1.0)), pos + offset + Vector3.UP * 0.22), bag, 6, 4)
-		placed += 1
+		elif roll < 0.64:
+			_crate_stack(pos, facing)
+		elif roll < 0.8:
+			_planter(pos, facing)
+		else:
+			_sidewalk_sign(pos + facing * 0.6, facing)
+
+
+func _is_blocked(pos: Vector3, placed: Array[Vector3], spacing: float) -> bool:
+	for area in _keep_clear:
+		if area.grow(0.6).has_point(Vector2(pos.x, pos.z)):
+			return true
+	for other in placed:
+		if other.distance_to(pos) < spacing:
+			return true
+	return false
+
+
+func _prop(xf: Transform3D, geo: GeoBatch, colliders: Array, health: float, kind: BreakableProp.Kind, extent: Vector3, colors: PackedColorArray) -> BreakableProp:
+	return BreakableProp.create(_breakables, xf, geo, colliders, health, kind, extent, colors)
+
+
+func _trash_bin(pos: Vector3) -> void:
+	var color := Color(0.1, 0.18, 0.14)
+	var geo := GeoBatch.new()
+	geo.add_cylinder(0.32, 0.3, 0.95, 8, Transform3D(Basis.IDENTITY, Vector3.UP * 0.475), MatLib.surface(color, 0.6, 0.3))
+	geo.add_cylinder(0.34, 0.34, 0.06, 8, Transform3D(Basis.IDENTITY, Vector3.UP * 0.97), MatLib.surface(Palette.METAL_DARK, 0.5, 0.5))
+	_prop(Transform3D(Basis.IDENTITY, pos), geo, [[Vector3(0.6, 0.95, 0.6), Transform3D(Basis.IDENTITY, Vector3.UP * 0.475)]], 50.0, BreakableProp.Kind.METAL, Vector3(0.6, 0.95, 0.6), PackedColorArray([color, Color(0.05, 0.05, 0.05)]))
+
+
+## A stack of plastic crates, the kind street stalls leave out overnight.
+func _crate_stack(pos: Vector3, facing: Vector3) -> void:
+	var color := [Color(0.1, 0.2, 0.45), Color(0.45, 0.08, 0.08), Color(0.5, 0.4, 0.05), Color(0.12, 0.3, 0.15)][_rng.randi() % 4] as Color
+	var crate := MatLib.surface(color, 0.6)
+	var slats := MatLib.surface(color.darkened(0.5), 0.6)
+	var geo := GeoBatch.new()
+	var levels := _rng.randi_range(1, 3)
+	for level in levels:
+		var y := 0.2 + level * 0.4
+		var twist := Basis(Vector3.UP, _rng.randf_range(-0.15, 0.15))
+		geo.add_box(Vector3(0.6, 0.38, 0.45), Transform3D(twist, Vector3(0, y, 0)), crate)
+		for i in 3:
+			geo.add_box(Vector3(0.62, 0.04, 0.47), Transform3D(twist, Vector3(0, y - 0.1 + i * 0.1, 0)), slats)
+	var height := levels * 0.4
+	_prop(Transform3D(Basis.looking_at(-facing), pos), geo, [[Vector3(0.62, height, 0.47), Transform3D(Basis.IDENTITY, Vector3.UP * height * 0.5)]], 40.0, BreakableProp.Kind.WOOD, Vector3(0.6, height, 0.45), PackedColorArray([color, color.darkened(0.5)]))
+
+
+## Concrete planter with glowing synthetic plants.
+func _planter(pos: Vector3, facing: Vector3) -> void:
+	var concrete := Color(0.3, 0.3, 0.32)
+	var leaf := [Palette.CYAN, Palette.LIME, Palette.PINK][_rng.randi() % 3] as Color
+	var geo := GeoBatch.new()
+	geo.add_box_at(Vector3(1.6, 0.6, 0.6), Vector3(0, 0.3, 0), MatLib.surface(concrete, 0.8))
+	geo.add_box_at(Vector3(1.45, 0.05, 0.45), Vector3(0, 0.6, 0), MatLib.surface(Color(0.08, 0.05, 0.03), 0.9))
+	var glow := MatLib.neon(leaf, 2.5)
+	for i in 9:
+		var root := Vector3(_rng.randf_range(-0.6, 0.6), 0.6, _rng.randf_range(-0.15, 0.15))
+		var tip := root + Vector3(_rng.randf_range(-0.25, 0.25), _rng.randf_range(0.35, 0.8), _rng.randf_range(-0.15, 0.15))
+		geo.add_bar(root, tip, 0.03, glow)
+	_prop(Transform3D(Basis.looking_at(-facing), pos), geo, [[Vector3(1.6, 0.6, 0.6), Transform3D(Basis.IDENTITY, Vector3.UP * 0.3)]], 150.0, BreakableProp.Kind.CONCRETE, Vector3(1.6, 0.9, 0.6), PackedColorArray([concrete, leaf]))
+
+
+## Folding sidewalk sign with a neon arrow pointing at the shop behind it.
+func _sidewalk_sign(pos: Vector3, facing: Vector3) -> void:
+	var color := Palette.random_neon(_rng)
+	var board := MatLib.surface(Color(0.05, 0.04, 0.06), 0.5)
+	var neon := MatLib.neon(color, 4.0)
+	var geo := GeoBatch.new()
+	for side: float in [-1.0, 1.0]:
+		var tilt := Basis(Vector3.RIGHT, side * deg_to_rad(12.0))
+		geo.add_box(Vector3(0.6, 1.0, 0.03), Transform3D(tilt, Vector3(0, 0.5, side * 0.11)), board)
+		var face := Transform3D(tilt, Vector3(0, 0.5, side * 0.11)).translated_local(Vector3(0, 0, side * 0.02))
+		geo.add_polyline(PackedVector3Array([face * Vector3(-0.2, -0.1, 0), face * Vector3(0.15, -0.1, 0), face * Vector3(0.15, -0.25, 0), face * Vector3(0.25, 0.0, 0), face * Vector3(0.15, 0.25, 0), face * Vector3(0.15, 0.1, 0), face * Vector3(-0.2, 0.1, 0)]), 0.025, neon, true)
+		geo.add_polyline(PackedVector3Array([face * Vector3(-0.26, -0.44, 0), face * Vector3(0.26, -0.44, 0), face * Vector3(0.26, 0.44, 0), face * Vector3(-0.26, 0.44, 0)]), 0.015, neon, true)
+	var sign := _prop(Transform3D(Basis.looking_at(-facing.cross(Vector3.UP)), pos), geo, [[Vector3(0.6, 1.0, 0.3), Transform3D(Basis.IDENTITY, Vector3.UP * 0.5)]], 35.0, BreakableProp.Kind.WOOD, Vector3(0.6, 1.0, 0.3), PackedColorArray([Color(0.05, 0.04, 0.06), color]))
+	sign.electrical = true
+
+
+## Street name signs at the four corners of the crossing.
+func _build_street_signs() -> void:
+	var metal := MatLib.surface(Palette.METAL_DARK, 0.4, 0.7)
+	var plate := MatLib.surface(Color(0.03, 0.1, 0.25), 0.4, 0.3)
+	for sx: float in [-1.0, 1.0]:
+		for sz: float in [-1.0, 1.0]:
+			var pos := Vector3(sx * (SIDEWALK_OUTER - 0.45), CURB_HEIGHT, sz * (SIDEWALK_OUTER - 0.45))
+			var geo := GeoBatch.new()
+			geo.add_cylinder(0.05, 0.05, 3.0, 6, Transform3D(Basis.IDENTITY, Vector3.UP * 1.5), metal)
+			geo.add_box_at(Vector3(1.0, 0.3, 0.04), Vector3(0, 2.7, 0), plate)
+			geo.add_box_at(Vector3(0.04, 0.3, 1.0), Vector3(0, 2.35, 0), plate)
+			geo.add_polyline(PackedVector3Array([Vector3(-0.5, 2.55, 0.03), Vector3(0.5, 2.55, 0.03), Vector3(0.5, 2.85, 0.03), Vector3(-0.5, 2.85, 0.03)]), 0.015, MatLib.neon(Palette.CYAN, 3.0), true)
+			var sign := _prop(Transform3D(Basis(Vector3.UP, 0.0 if sz < 0.0 else PI), pos), geo, [[Vector3(0.15, 3.0, 0.15), Transform3D(Basis.IDENTITY, Vector3.UP * 1.5)]], 60.0, BreakableProp.Kind.METAL, Vector3(1.0, 3.0, 1.0), PackedColorArray([Palette.METAL_DARK, Color(0.03, 0.1, 0.25)]))
+			BuildKit.neon_text(sign.visual, "KABUKI AVE", Transform3D(Basis.IDENTITY, Vector3(0, 2.7, 0.03)), Palette.CYAN, 0.16)
+			BuildKit.neon_text(sign.visual, "CROW ST", Transform3D(Basis(Vector3.UP, PI * 0.5), Vector3(0.03, 2.35, 0)), Palette.CYAN, 0.16)
+			_keep_clear.append(Rect2(pos.x - 1.0, pos.z - 1.0, 2.0, 2.0))
+
+
+## Striped barriers fencing off the steam vents in the road.
+func _build_roadworks() -> void:
+	var stripe_a := MatLib.surface(Color(0.9, 0.45, 0.05), 0.5)
+	var stripe_b := MatLib.surface(Color(0.9, 0.9, 0.85), 0.5)
+	var legs := MatLib.surface(Palette.METAL_DARK, 0.5, 0.5)
+	for vent in [Vector3(14, 0, 2.0), Vector3(-20, 0, -1.5)]:
+		for i in 3:
+			var angle := TAU * i / 3.0 + _rng.randf_range(-0.3, 0.3)
+			var pos: Vector3 = vent + Vector3(cos(angle), 0, sin(angle)) * 1.6
+			var geo := GeoBatch.new()
+			for s in 4:
+				geo.add_box_at(Vector3(0.3, 0.22, 0.04), Vector3(-0.45 + s * 0.3, 0.85, 0), stripe_a if s % 2 == 0 else stripe_b)
+			for side: float in [-1.0, 1.0]:
+				geo.add_bar(Vector3(side * 0.5, 0.95, 0), Vector3(side * 0.55, 0.0, 0.25), 0.05, legs)
+				geo.add_bar(Vector3(side * 0.5, 0.95, 0), Vector3(side * 0.55, 0.0, -0.25), 0.05, legs)
+			geo.add_box_at(Vector3(0.12, 0.12, 0.12), Vector3(0.5, 1.05, 0), MatLib.neon(Palette.AMBER, 6.0, 0.0, 1.5, _rng.randf()))
+			var barrier := _prop(Transform3D(Basis(Vector3.UP, -angle + PI * 0.5), pos), geo, [[Vector3(1.2, 1.0, 0.5), Transform3D(Basis.IDENTITY, Vector3.UP * 0.5)]], 60.0, BreakableProp.Kind.WOOD, Vector3(1.2, 1.0, 0.5), PackedColorArray([Color(0.9, 0.45, 0.05), Color(0.9, 0.9, 0.85)]))
+			barrier.electrical = true
+
+
+## Bus shelters with glass side and back panels and a lit advert.
+func _build_bus_stops() -> void:
+	var frame := MatLib.surface(Palette.METAL, 0.35, 0.8)
+	for stop in [[Vector3(-48, CURB_HEIGHT, SIDEWALK_OUTER - 0.75), 0.0], [Vector3(SIDEWALK_OUTER - 0.75, CURB_HEIGHT, 46), -PI * 0.5]]:
+		var xf := Transform3D(Basis(Vector3.UP, stop[1]), stop[0])
+		var geo := GeoBatch.new()
+		geo.add_box(Vector3(3.8, 0.12, 1.5), xf.translated_local(Vector3(0, 2.6, -0.1)), frame)
+		geo.add_box(Vector3(3.8, 0.05, 0.05), xf.translated_local(Vector3(0, 2.52, 0.62)), MatLib.neon(Palette.CYAN, 4.0))
+		for x: float in [-1.8, 1.8]:
+			for z: float in [-0.65, 0.6]:
+				geo.add_box(Vector3(0.08, 2.6, 0.08), xf.translated_local(Vector3(x, 1.3, z)), frame)
+				BuildKit.box_collider(_body, Vector3(0.1, 2.6, 0.1), xf.translated_local(Vector3(x, 1.3, z)))
+		geo.add_box(Vector3(2.6, 0.08, 0.45), xf.translated_local(Vector3(0, 0.48, -0.35)), MatLib.surface(Palette.WOOD, 0.5))
+		BuildKit.box_collider(_body, Vector3(2.6, 0.5, 0.45), xf.translated_local(Vector3(0, 0.25, -0.35)))
+		var ad := MatLib.holo_ad(Palette.random_neon(_rng), Palette.random_neon(_rng), _rng.randi() % 4, _rng.randf() * 10.0, 2.2)
+		geo.add_quad(Vector2(1.2, 1.8), xf * Transform3D(Basis(Vector3.UP, PI * 0.5), Vector3(1.82, 1.3, -0.02)), ad)
+		geo.build_into(_root, "BusStop")
+		BuildKit.glass_pane(_breakables, xf.translated_local(Vector3(0, 1.4, -0.68)), Vector3(3.5, 2.0, 0.03))
+		BuildKit.glass_pane(_breakables, xf * Transform3D(Basis(Vector3.UP, PI * 0.5), Vector3(-1.8, 1.4, -0.03)), Vector3(1.2, 2.0, 0.03))
+		BuildKit.neon_text(_signs, "BUS 07", xf * Transform3D(Basis.IDENTITY, Vector3(0, 2.75, 0.66)), Palette.CYAN, 0.2)
+		var origin: Vector3 = stop[0]
+		_keep_clear.append(Rect2(origin.x - 2.6, origin.z - 2.6, 5.2, 5.2))
 
 
 func _vending_machine(pos: Vector3, facing: Vector3) -> void:
-	var basis := Basis.looking_at(-facing)
-	var xf := Transform3D(basis, pos)
 	var color := Palette.random_neon(_rng)
 	var body_color := [Color(0.5, 0.05, 0.08), Color(0.08, 0.15, 0.45), Color(0.75, 0.75, 0.78)][_rng.randi() % 3] as Color
-	_props.add_box(Vector3(1.0, 1.95, 0.75), xf.translated_local(Vector3(0, 0.975, 0)), MatLib.surface(body_color, 0.4, 0.3))
-	_props.add_box(Vector3(0.62, 1.2, 0.02), xf.translated_local(Vector3(-0.12, 1.15, 0.38)), MatLib.neon(color.lerp(Color.WHITE, 0.5), 1.6))
+	var geo := GeoBatch.new()
+	geo.add_box_at(Vector3(1.0, 1.95, 0.75), Vector3(0, 0.975, 0), MatLib.surface(body_color, 0.4, 0.3))
+	geo.add_box_at(Vector3(0.62, 1.2, 0.02), Vector3(-0.12, 1.15, 0.38), MatLib.neon(color.lerp(Color.WHITE, 0.5), 1.6))
 	for row in 4:
-		_props.add_box(Vector3(0.58, 0.04, 0.03), xf.translated_local(Vector3(-0.12, 0.7 + row * 0.3, 0.39)), MatLib.surface(Palette.METAL_DARK, 0.5))
-	_props.add_box(Vector3(0.18, 0.5, 0.03), xf.translated_local(Vector3(0.33, 1.3, 0.38)), MatLib.surface(Palette.METAL_DARK, 0.4))
-	_props.add_box(Vector3(1.02, 0.08, 0.77), xf.translated_local(Vector3(0, 1.95, 0)), MatLib.neon(color, 4.0))
-	BuildKit.omni(_lights, xf * Vector3(0, 1.3, 0.9), color, 0.8, 3.5)
-	BuildKit.box_collider(_body, Vector3(1.0, 1.95, 0.75), xf.translated_local(Vector3(0, 0.975, 0)))
+		geo.add_box_at(Vector3(0.58, 0.04, 0.03), Vector3(-0.12, 0.7 + row * 0.3, 0.39), MatLib.surface(Palette.METAL_DARK, 0.5))
+	geo.add_box_at(Vector3(0.18, 0.5, 0.03), Vector3(0.33, 1.3, 0.38), MatLib.surface(Palette.METAL_DARK, 0.4))
+	geo.add_box_at(Vector3(1.02, 0.08, 0.77), Vector3(0, 1.95, 0), MatLib.neon(color, 4.0))
+	var machine := _prop(Transform3D(Basis.looking_at(-facing), pos), geo, [[Vector3(1.0, 1.95, 0.75), Transform3D(Basis.IDENTITY, Vector3(0, 0.975, 0))]], 160.0, BreakableProp.Kind.METAL, Vector3(1.0, 1.95, 0.75), PackedColorArray([body_color, Color(0.3, 0.3, 0.33), color]))
+	machine.electrical = true
+	machine.add_light(BuildKit.omni(machine.visual, Vector3(0, 1.3, 0.9), color, 0.8, 3.5))
 
 
 func _build_parked_cars() -> void:
