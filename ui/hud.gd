@@ -4,7 +4,7 @@ extends CanvasLayer
 ## text)), an item feed ("+ Synth-Soda", call_group("hud", "notify_item", text, color)), running
 ## food/stim effects and a "click to play" overlay while the mouse is free.
 
-const HINT_TEXT := "WASD move   SHIFT sprint   SPACE jump   LMB fire   R reload   E interact\nTAB/I inventory   1-3/wheel weapons   ESC pause/settings   F2 wobble   F3 retro filter"
+const HINT_TEXT := "WASD move   SHIFT sprint   SPACE jump   LMB fire   R reload   E interact\nTAB/I inventory   1-3/wheel weapons   H heal   ESC pause/settings   F2 wobble   F3 retro filter"
 const HINT_DURATION := 12.0
 const FEED_LINES := 5
 const FEED_TIME := 3.5
@@ -16,6 +16,12 @@ var _weapon_name: Label
 var _hotbar: HBoxContainer
 var _feed: VBoxContainer
 var _effects: Label
+var _health_bar: ProgressBar
+var _health_label: Label
+var _vignette: TextureRect
+var _hurt_flash := 0.0
+var _damage: DamageIndicator
+var _flatline: Control
 var _font: Font
 var _crosshair: Crosshair
 var _ammo_label: Label
@@ -52,13 +58,16 @@ func _ready() -> void:
 	root.add_child(_waypoint)
 	_waypoint.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_build_overlay(root)
+	_build_damage_effects(root)
 	_fade = ColorRect.new()
 	_fade.color = Color(0, 0, 0, 0)
 	_fade.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	root.add_child(_fade)
 	_fade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_build_flatline(root)
 
 	_build_hotbar(root)
+	_build_health(root)
 	_build_feed(root)
 	GameState.effects_changed.connect(_update_effects)
 	_update_effects()
@@ -71,6 +80,9 @@ func _ready() -> void:
 		_holder.weapon_changed.connect(_bind_weapon)
 		_holder.slots_changed.connect(_refresh_hotbar)
 		_bind_weapon(_holder.current)
+		player.health_changed.connect(_on_health_changed)
+		player.hurt.connect(_on_hurt)
+		_on_health_changed(player.health.health, player.health.max_health)
 
 
 ## Follows the gun in hand: ammo, reload and name.
@@ -109,6 +121,7 @@ func _process(delta: float) -> void:
 	if _message_time > 0.0:
 		_message_time -= delta
 		_message.modulate.a = clampf(_message_time / 0.6, 0.0, 1.0)
+	_update_vignette(delta)
 	for line in _feed.get_children():
 		var left: float = line.get_meta(&"time") - delta
 		line.set_meta(&"time", left)
@@ -148,6 +161,39 @@ func notify_item(text: String, color := Palette.LIME) -> void:
 		var oldest := _feed.get_child(0)
 		_feed.remove_child(oldest)
 		oldest.queue_free()
+
+
+## The "FLATLINED" screen while the player is down.
+func show_flatline(on: bool) -> void:
+	_flatline.visible = on
+	if on:
+		_damage.clear()
+
+
+func _on_health_changed(health: float, max_health: float) -> void:
+	_health_bar.max_value = max_health
+	_health_bar.value = health
+	_health_label.text = "%3d" % ceili(health)
+	var low := health < max_health * 0.3
+	_health_label.label_settings.font_color = Palette.RED if low else Color.WHITE
+
+
+func _on_hurt(hit: HitInfo) -> void:
+	_hurt_flash = minf(1.0, _hurt_flash + 0.35 + hit.damage / 40.0)
+	var from := hit.position - hit.direction * 5.0
+	if hit.source is Node3D and is_instance_valid(hit.source) and hit.source != _player:
+		from = (hit.source as Node3D).global_position
+	var local := _player.camera.global_basis.inverse() * (from - _player.global_position)
+	_damage.add_hit(atan2(local.x, -local.z))
+
+
+## Red edges after a hit, and a slow pulse while health is low.
+func _update_vignette(delta: float) -> void:
+	_hurt_flash = move_toward(_hurt_flash, 0.0, delta * 1.6)
+	var low := 0.0
+	if _player and not _player.is_dead and _player.health.health < _player.health.max_health * 0.3:
+		low = 0.35 + 0.2 * sin(_elapsed * 5.0)
+	_vignette.modulate.a = maxf(_hurt_flash, low)
 
 
 func _update_effects() -> void:
@@ -312,6 +358,79 @@ func _build_hotbar(root: Control) -> void:
 	_hotbar.offset_bottom = -30
 
 
+func _build_health(root: Control) -> void:
+	var row := HBoxContainer.new()
+	row.name = "Health"
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.add_theme_constant_override("separation", 10)
+	root.add_child(row)
+	row.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT)
+	row.offset_left = 28
+	row.offset_right = 380
+	row.offset_top = -62
+	row.offset_bottom = -30
+	row.add_child(_label("HP", 18, Palette.LIME, Palette.LIME.darkened(0.7)))
+	_health_bar = ProgressBar.new()
+	_health_bar.show_percentage = false
+	_health_bar.custom_minimum_size = Vector2(220, 14)
+	_health_bar.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	_health_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var back := StyleBoxFlat.new()
+	back.bg_color = Color(0.02, 0.0, 0.05, 0.6)
+	back.border_color = Color(Palette.LIME.r, Palette.LIME.g, Palette.LIME.b, 0.5)
+	back.set_border_width_all(1)
+	var fill := StyleBoxFlat.new()
+	fill.bg_color = Palette.LIME
+	fill.shadow_color = Color(Palette.LIME.r, Palette.LIME.g, Palette.LIME.b, 0.4)
+	fill.shadow_size = 4
+	_health_bar.add_theme_stylebox_override("background", back)
+	_health_bar.add_theme_stylebox_override("fill", fill)
+	row.add_child(_health_bar)
+	_health_label = _label("100", 20, Color.WHITE, Palette.LIME.darkened(0.6))
+	row.add_child(_health_label)
+
+
+func _build_damage_effects(root: Control) -> void:
+	var gradient := Gradient.new()
+	gradient.set_color(0, Color(0.8, 0.0, 0.08, 0.0))
+	gradient.set_color(1, Color(0.8, 0.0, 0.08, 0.85))
+	gradient.add_point(0.55, Color(0.8, 0.0, 0.08, 0.0))
+	var texture := GradientTexture2D.new()
+	texture.gradient = gradient
+	texture.fill = GradientTexture2D.FILL_RADIAL
+	texture.fill_from = Vector2(0.5, 0.5)
+	texture.fill_to = Vector2(1.05, 0.5)
+	texture.width = 256
+	texture.height = 256
+	_vignette = TextureRect.new()
+	_vignette.texture = texture
+	_vignette.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_vignette.stretch_mode = TextureRect.STRETCH_SCALE
+	_vignette.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_vignette.modulate.a = 0.0
+	root.add_child(_vignette)
+	_vignette.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_damage = DamageIndicator.new()
+	_damage.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	root.add_child(_damage)
+	_damage.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+
+
+func _build_flatline(root: Control) -> void:
+	_flatline = VBoxContainer.new()
+	_flatline.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_flatline.alignment = BoxContainer.ALIGNMENT_CENTER
+	root.add_child(_flatline)
+	_flatline.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	var title := _label("FLATLINED", 64, Palette.RED, Palette.RED.darkened(0.5))
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_flatline.add_child(title)
+	var sub := _label("VITALS 0  //  PINGING CLINIC 24H ...", 18, Color(0.8, 0.85, 1.0), Color(0.1, 0.0, 0.1))
+	sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_flatline.add_child(sub)
+	_flatline.visible = false
+
+
 func _build_feed(root: Control) -> void:
 	_feed = VBoxContainer.new()
 	_feed.name = "ItemFeed"
@@ -321,15 +440,15 @@ func _build_feed(root: Control) -> void:
 	_feed.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT)
 	_feed.offset_left = 28
 	_feed.offset_right = 520
-	_feed.offset_top = -260
-	_feed.offset_bottom = -64
+	_feed.offset_top = -300
+	_feed.offset_bottom = -94
 	_effects = _label("", 15, Palette.AMBER, Palette.AMBER.darkened(0.7))
 	root.add_child(_effects)
 	_effects.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT)
 	_effects.offset_left = 28
 	_effects.offset_right = 700
-	_effects.offset_top = -56
-	_effects.offset_bottom = -30
+	_effects.offset_top = -88
+	_effects.offset_bottom = -64
 
 
 func _build_overlay(root: Control) -> void:

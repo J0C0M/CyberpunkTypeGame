@@ -66,6 +66,8 @@ func _ready() -> void:
 	_geo.build_into(_root, "BlockGeometry")
 	if not Engine.is_editor_hint():
 		GameState.register_place(&"apartment", "Neo-Heights 1107", global_transform * Vector3(0, 0, 2.0))
+		# Where the player wakes up after sleeping or a flatline: next to the bed.
+		GameState.places[&"respawn_home"] = {"label": "", "position": to_global(Vector3(3.9, UPPER_Y + 0.05, -2.2)), "yaw": global_rotation.y + PI}
 		GameState.night_passed.connect(func() -> void: _fridge_stocked = true)
 		_add_music_zones()
 		add_to_group("saveable")
@@ -577,6 +579,7 @@ func _sleep(player: Player) -> void:
 	var hud := get_tree().get_first_node_in_group("hud")
 	await hud.fade_to(1.0, 1.2).finished
 	GameState.pass_night(6.0)
+	player.restore_health()
 	player.global_position = to_global(Vector3(3.9, UPPER_Y + 0.05, -2.2))
 	player.velocity = Vector3.ZERO
 	player.rotation.y = global_rotation.y + PI

@@ -2,6 +2,13 @@ class_name Player
 extends CharacterBody3D
 ## First-person controller: walk, sprint, jump, mouse look, head bob, weapon recoil, explosion
 ## shake and knockback, and the interaction ray that finds what the player is looking at.
+## Also the player's health: hits arrive through the damage system like everyone else's (the body
+## collider is registered with a Damageable); health comes back on its own after a few quiet
+## seconds, med patches and food heal, and at zero the player flatlines (see Respawn).
+
+signal health_changed(health: float, max_health: float)
+signal hurt(hit: HitInfo)
+signal died(hit: HitInfo)
 
 @export_group("Movement")
 @export var walk_speed := 4.5
@@ -21,6 +28,23 @@ extends CharacterBody3D
 @export_group("Head bob")
 @export var bob_amount := 0.035
 
+@export_group("Health")
+@export var max_health := 100.0
+## Seconds without damage before health starts coming back, and how fast.
+@export var regen_delay := 5.0
+@export var regen_rate := 12.0
+## Explosions hurt the player less than bullets do (the game is meant to be forgiving).
+@export var explosion_damage_scale := 0.5
+
+## Share of the player's credits the clinic bills after a flatline, and the most it takes.
+@export var death_penalty := 0.1
+@export var death_penalty_cap := 150
+
+const HURT_SOUND := preload("res://assets/audio/player_hurt.wav")
+const FLATLINE_SOUND := preload("res://assets/audio/flatline.wav")
+## Healing items H uses, best first.
+const QUICK_HEAL: Array[StringName] = [&"med_patch", &"sushi", &"noodles", &"onigiri"]
+
 @onready var head: Node3D = $Head
 @onready var recoil_pivot: Node3D = $Head/RecoilPivot
 @onready var camera: Camera3D = $Head/RecoilPivot/Camera3D
@@ -32,6 +56,8 @@ var weapon: Firearm:
 	get:
 		return weapon_holder.current if weapon_holder else null
 
+var health: Damageable
+var is_dead := false
 var is_sprinting := false
 ## The Interactable under the crosshair within reach, or null. The HUD shows its prompt.
 var focused_interactable: Interactable
@@ -45,12 +71,125 @@ var _recoil := Vector2.ZERO
 var _shake := 0.0
 ## Push from explosions, added on top of walking and decaying quickly.
 var _knockback := Vector3.ZERO
+var _since_hurt := 0.0
+var _hurt_audio: AudioStreamPlayer
+## Where the player started (Ren's noodle bar): the respawn point without a key card.
+var _start := Transform3D.IDENTITY
 
 
 func _ready() -> void:
 	add_to_group("player")
 	camera.fov = base_fov
 	_camera_rest = camera.position
+	_start = global_transform
+	health = Damageable.new()
+	health.name = "Health"
+	health.max_health = max_health
+	health.explosion_multiplier = explosion_damage_scale
+	add_child(health)
+	Damageable.register(self, health, &"body")
+	health.damaged.connect(_on_damaged)
+	health.died.connect(_on_died)
+	_hurt_audio = AudioStreamPlayer.new()
+	_hurt_audio.stream = HURT_SOUND
+	_hurt_audio.bus = &"SFX"
+	_hurt_audio.volume_db = -6.0
+	add_child(_hurt_audio)
+
+
+## Adds health (food, med patches). Returns how much was actually healed.
+func heal(amount: float) -> float:
+	if is_dead:
+		return 0.0
+	var before := health.health
+	health.health = minf(health.max_health, health.health + amount)
+	health_changed.emit(health.health, health.max_health)
+	return health.health - before
+
+
+## Full health and back on their feet (respawning, sleeping, loading).
+func restore_health(amount := -1.0) -> void:
+	is_dead = false
+	health.restore()
+	if amount > 0.0:
+		health.health = minf(amount, health.max_health)
+	_since_hurt = regen_delay
+	health_changed.emit(health.health, health.max_health)
+
+
+func _on_damaged(hit: HitInfo) -> void:
+	_since_hurt = 0.0
+	_shake = maxf(_shake, 0.25)
+	_hurt_audio.pitch_scale = randf_range(0.9, 1.1)
+	_hurt_audio.play()
+	health_changed.emit(health.health, health.max_health)
+	hurt.emit(hit)
+
+
+func _on_died(hit: HitInfo) -> void:
+	is_dead = true
+	velocity = Vector3.ZERO
+	health_changed.emit(0.0, health.max_health)
+	died.emit(hit)
+	_flatline()
+
+
+## Death: the view drops, the screen goes black, the clinic takes its cut and the player wakes up
+## at home (with the key card) or back at Ren's. Wanted level and angry gangs are reset.
+func _flatline() -> void:
+	# Close whatever menu or seat was open; the death screen owns input now.
+	get_tree().call_group("dialogue_screen", "close")
+	GameState.claim_ui(&"dead", false)
+	_hurt_audio.stream = FLATLINE_SOUND
+	_hurt_audio.pitch_scale = 1.0
+	_hurt_audio.play()
+	weapon_holder.visible = false
+	var fall := create_tween().set_parallel()
+	fall.tween_property(head, "rotation:z", 1.2, 0.9).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	fall.tween_property(head, "position:y", 0.35, 0.9).set_trans(Tween.TRANS_BOUNCE).set_ease(Tween.EASE_OUT)
+	var hud := get_tree().get_first_node_in_group("hud")
+	await get_tree().create_timer(0.8).timeout
+	hud.show_flatline(true)
+	await hud.fade_to(1.0, 1.6).finished
+	await get_tree().create_timer(1.2).timeout
+
+	var bill := mini(int(GameState.credits * death_penalty), death_penalty_cap)
+	GameState.spend_credits(bill)
+	GameState.clock_minutes = fposmod(GameState.clock_minutes + 120.0, 1440.0)
+	get_tree().call_group("police", "clear_heat")
+	get_tree().call_group("enemies", "on_player_respawned")
+	var home: Dictionary = GameState.places.get(&"respawn_home", {})
+	var at_home := GameState.inventory.count(&"keycard_1107") > 0 and not home.is_empty()
+	global_transform = Transform3D(Basis(Vector3.UP, home.get("yaw", 0.0)), home["position"]) if at_home else _start
+	velocity = Vector3.ZERO
+	_knockback = Vector3.ZERO
+	head.rotation = Vector3.ZERO
+	head.position.y = 1.62
+	weapon_holder.visible = true
+	restore_health()
+	hud.show_flatline(false)
+	var where := "You come to in your apartment." if at_home else "You come to on a stool at Ren's."
+	var cost := " Clinic 24H billed you %d ¢ for the patch-up." % bill if bill > 0 else " The clinic patched you up for free. Lucky."
+	hud.show_message(where + cost, 5.0)
+	await hud.fade_to(0.0, 1.4).finished
+	GameState.release_ui()
+
+
+## H: uses the best healing item in the inventory.
+func _quick_heal() -> void:
+	if health.health >= health.max_health:
+		get_tree().call_group("hud", "show_message", "Already at full health.", 1.2)
+		return
+	for id in QUICK_HEAL:
+		if GameState.inventory.count(id) > 0:
+			var line := GameState.use_item(id)
+			get_tree().call_group("hud", "notify_item", line, ItemDB.color(id))
+			_hurt_audio.stream = GameState.use_sound(id)
+			_hurt_audio.pitch_scale = 1.0
+			_hurt_audio.play()
+			_hurt_audio.stream = HURT_SOUND
+			return
+	get_tree().call_group("hud", "show_message", "Nothing to patch yourself up with. The Clinic sells med patches.", 2.0)
 
 
 ## Mouse look; called by Main for every captured mouse motion event.
@@ -84,6 +223,10 @@ func apply_knockback(impulse: Vector3) -> void:
 
 
 func _physics_process(delta: float) -> void:
+	_update_health(delta)
+	if is_dead:
+		_update_camera_effects(delta)
+		return
 	if not is_on_floor():
 		velocity.y -= _gravity * delta
 	elif Input.is_action_just_pressed("jump") and GameState.is_free_roaming():
@@ -119,6 +262,7 @@ func save_data() -> Dictionary:
 		"yaw": rotation.y,
 		"pitch": head.rotation.x,
 		"weapons": weapon_holder.save_data(),
+		"health": health.health,
 	}
 
 
@@ -127,7 +271,20 @@ func load_data(data: Dictionary) -> void:
 	rotation = Vector3(0.0, float(data.get("yaw", rotation.y)), 0.0)
 	head.rotation.x = float(data.get("pitch", 0.0))
 	velocity = Vector3.ZERO
+	restore_health(float(data.get("health", max_health)))
 	weapon_holder.load_data(data.get("weapons", {}))
+
+
+func _update_health(delta: float) -> void:
+	if is_dead:
+		return
+	if Input.is_action_just_pressed("quick_heal") and GameState.is_free_roaming():
+		_quick_heal()
+	_since_hurt += delta
+	var regen := regen_rate if _since_hurt >= regen_delay else 0.0
+	regen += GameState.effect(&"regen")
+	if regen > 0.0 and health.health < health.max_health:
+		heal(regen * delta)
 
 
 ## Looks for an Interactable in front of the camera; walls and props block the ray.

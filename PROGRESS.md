@@ -59,6 +59,16 @@ User's combat direction (asked at the start): **street gang + police drones**, *
   - Tests: `tests/test_inventory.tscn`, `tests/test_save.tscn` (headless), `tests/shot_ui.tscn` and
     `tests/shot_pickups.tscn` (windowed screenshots, `-- --out=<prefix>`). New class_names need one
     `--import` run before tests can see them.
-- Part B: combat (enemies, player health, more weapons): not started
+- Part B: combat: **in progress**
+  - [x] B1 Player health: `Damageable` on the player body (layer 2; explosions now reach the player at half
+    damage via `Damageable.explosion_multiplier`), regen after 5 s quiet, H = quick heal (med patch first),
+    food heals a little. HUD: HP bar, red vignette, damage-direction arcs (`ui/damage_indicator.gd`).
+    Flatline: fade, "FLATLINED", clinic bill 10 % (max 150 ¢), +2 h, wake up in 1107 (with key card,
+    `GameState.places[&"respawn_home"]`) or at Ren's; calls groups "police" `clear_heat` and "enemies"
+    `on_player_respawned`. Sleeping restores health. Test: `tests/test_health.tscn`.
+  - [ ] B2 Pistol + shotgun (items, models, sounds, shop stock), shared hitscan
+  - [ ] B3 Street gang (navmesh with roads, cover, perception, states, turf, loot)
+  - [ ] B4 Wanted level + police drones, merchant/Ren reactions
+  - [ ] B5 Balance pass, docs
 - Part C: bug hunt, screenshot tour, BUGFIX_NOTES.md: not started
   - Noted for Part C: door number plates (Label3D) face into the apartments (local +Z), check from the hallway.

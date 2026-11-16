@@ -6,8 +6,8 @@ extends Node3D
 ## (group "explosions"); call Explosions.explode() from anywhere.
 
 const SOUND := preload("res://assets/audio/explosion.wav")
-## People, props and cars (physics layers 3 and 4).
-const DAMAGE_MASK := 4 | 8
+## The player, people, props and cars (physics layers 2, 3 and 4).
+const DAMAGE_MASK := 2 | 4 | 8
 
 @export var effect_slots := 4
 
