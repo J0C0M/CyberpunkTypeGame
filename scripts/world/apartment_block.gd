@@ -25,6 +25,11 @@ const CAB_DEPTH := 2.4
 const APARTMENT_X := 1.6
 ## The window at the hallway's east end: from/to along Z, and its sill and lintel above the floor.
 const HALL_WINDOW := Vector4(-9.8, -8.4, 0.8, 2.4)
+## The bathroom west of the apartment (x from BATH_WEST to the apartment wall, z from/to) and its
+## doorway in the apartment's west wall (z from/to).
+const BATH_WEST := -1.0
+const BATH_Z := Vector2(-6.4, -3.6)
+const BATH_DOOR := Vector2(-5.7, -4.7)
 const ACCENT := Color(0.62, 0.28, 1.0)
 
 const DING := preload("res://assets/audio/elevator_ding.wav")
@@ -75,6 +80,7 @@ func _ready() -> void:
 		var half := _half()
 		GameState.register_area("Neo-Heights lobby", global_transform.translated_local(Vector3(0, LOBBY_HEIGHT * 0.5, (HALL_BACK_Z - CAB_DEPTH) * 0.5)), Vector3(width, LOBBY_HEIGHT + 0.6, -HALL_BACK_Z + CAB_DEPTH))
 		GameState.register_area("Neo-Heights, 11th floor", global_transform.translated_local(Vector3(0, UPPER_Y + UPPER_HEIGHT * 0.5, (HALL_FRONT_Z + HALL_BACK_Z - CAB_DEPTH) * 0.5)), Vector3(width, UPPER_HEIGHT + 0.6, HALL_FRONT_Z - HALL_BACK_Z + CAB_DEPTH))
+		GameState.register_area("Apartment 1107, bathroom", global_transform.translated_local(Vector3((BATH_WEST + APARTMENT_X) * 0.5, UPPER_Y + UPPER_HEIGHT * 0.5, (BATH_Z.x + BATH_Z.y) * 0.5)), Vector3(APARTMENT_X - BATH_WEST, UPPER_HEIGHT + 0.6, BATH_Z.y - BATH_Z.x))
 		GameState.register_area("Apartment 1107", global_transform.translated_local(Vector3((APARTMENT_X + half) * 0.5, UPPER_Y + UPPER_HEIGHT * 0.5, HALL_FRONT_Z * 0.5)), Vector3(half - APARTMENT_X, UPPER_HEIGHT + 0.6, -HALL_FRONT_Z))
 		# Where the player wakes up after sleeping or a flatline: next to the bed.
 		GameState.places[&"respawn_home"] = {"label": "", "position": to_global(Vector3(3.9, UPPER_Y + 0.05, -2.2)), "yaw": global_rotation.y + PI}
@@ -420,8 +426,15 @@ func _build_hallway() -> void:
 		_geo.add_box_at(Vector3(w, UPPER_HEIGHT, 0.3), center, lining)
 		BuildKit.box_collider_at(_body, Vector3(w, UPPER_HEIGHT, 0.3), center)
 	_geo.add_box_at(Vector3(1.2, UPPER_HEIGHT - 2.3, 0.3), Vector3(door_x, UPPER_Y + 2.3 + (UPPER_HEIGHT - 2.3) * 0.5, HALL_FRONT_Z + 0.15), lining)
-	_geo.add_box_at(Vector3(0.3, UPPER_HEIGHT, -HALL_FRONT_Z), Vector3(APARTMENT_X - 0.15, UPPER_Y + UPPER_HEIGHT * 0.5, HALL_FRONT_Z * 0.5), lining)
-	BuildKit.box_collider_at(_body, Vector3(0.3, UPPER_HEIGHT, -HALL_FRONT_Z), Vector3(APARTMENT_X - 0.15, UPPER_Y + UPPER_HEIGHT * 0.5, HALL_FRONT_Z * 0.5))
+	# The apartment's west wall, with the bathroom doorway in it.
+	for span: Vector2 in [Vector2(HALL_FRONT_Z, BATH_DOOR.x), Vector2(BATH_DOOR.y, 0.0)]:
+		var length := span.y - span.x
+		var center := Vector3(APARTMENT_X - 0.15, UPPER_Y + UPPER_HEIGHT * 0.5, (span.x + span.y) * 0.5)
+		_geo.add_box_at(Vector3(0.3, UPPER_HEIGHT, length), center, lining)
+		BuildKit.box_collider_at(_body, Vector3(0.3, UPPER_HEIGHT, length), center)
+	var door_top := Vector3(APARTMENT_X - 0.15, UPPER_Y + 2.15 + (UPPER_HEIGHT - 2.15) * 0.5, (BATH_DOOR.x + BATH_DOOR.y) * 0.5)
+	_geo.add_box_at(Vector3(0.3, UPPER_HEIGHT - 2.15, BATH_DOOR.y - BATH_DOOR.x), door_top, lining)
+	BuildKit.box_collider_at(_body, Vector3(0.3, UPPER_HEIGHT - 2.15, BATH_DOOR.y - BATH_DOOR.x), door_top)
 	# Hallway end walls. The east one lines the shell around the end window (the shell's facade
 	# shader would otherwise paint lit "windows" on the inside of the wall).
 	_geo.add_box_at(Vector3(0.05, UPPER_HEIGHT, hall_width), Vector3(-half + 0.33, UPPER_Y + UPPER_HEIGHT * 0.5, hall_center_z), lining)
@@ -486,12 +499,50 @@ func _build_apartment() -> void:
 	_geo.add_box_at(Vector3(2.6, 0.012, 2.0), Vector3(4.4, y + 0.026, -4.6), MatLib.surface(Color(0.08, 0.2, 0.22), 0.9))
 	_geo.add_bar(Vector3(APARTMENT_X + 0.7, sill - 0.05, front + 0.03), Vector3(half - 0.7, sill - 0.05, front + 0.03), 0.04, MatLib.neon(ACCENT, 3.0))
 	_build_bed(y)
+	_build_bathroom(y)
 	_build_lounge(y)
 	_build_kitchenette(y, half)
 	_build_desk(y)
 	_build_clutter(y, half)
 	BuildKit.omni(_root, Vector3(4.8, y + UPPER_HEIGHT - 0.4, -4.0), Palette.WARM_WHITE, 1.3, 7.0)
 	BuildKit.omni(_root, Vector3(half - 1.0, y + 1.2, -1.2), ACCENT, 0.7, 4.0)
+
+
+## A small tiled bathroom behind the west wall: sink with the mirror above it, a toilet and a
+## shower with a neon strip.
+func _build_bathroom(y: float) -> void:
+	var tile := MatLib.surface(Color(0.55, 0.62, 0.66), 0.25, 0.1, 0.12)
+	var porcelain := MatLib.surface(Color(0.88, 0.9, 0.92), 0.2, 0.0, 0.05)
+	var east := APARTMENT_X - 0.3
+	var width := east - BATH_WEST
+	var depth := BATH_Z.y - BATH_Z.x
+	var center := Vector3((BATH_WEST + east) * 0.5, y, (BATH_Z.x + BATH_Z.y) * 0.5)
+	_geo.add_box_at(Vector3(width, 0.02, depth), center + Vector3.UP * 0.01, MatLib.surface(Color(0.2, 0.22, 0.26), 0.3, 0.0, 0.1))
+	_geo.add_box_at(Vector3(width, 0.05, depth), center + Vector3.UP * (UPPER_HEIGHT - 0.4), MatLib.surface(Color(0.15, 0.15, 0.17), 0.6))
+	for wall: Array in [[Vector3(width + 0.2, UPPER_HEIGHT, 0.2), Vector3(center.x, y + UPPER_HEIGHT * 0.5, BATH_Z.x - 0.1)], [Vector3(width + 0.2, UPPER_HEIGHT, 0.2), Vector3(center.x, y + UPPER_HEIGHT * 0.5, BATH_Z.y + 0.1)], [Vector3(0.2, UPPER_HEIGHT, depth), Vector3(BATH_WEST - 0.1, y + UPPER_HEIGHT * 0.5, center.z)]]:
+		_geo.add_box_at(wall[0], wall[1], tile)
+		BuildKit.box_collider_at(_body, wall[0], wall[1])
+	# Sink and mirror on the west wall.
+	var sink := Vector3(BATH_WEST + 0.28, y, center.z)
+	_geo.add_box_at(Vector3(0.45, 0.16, 0.6), sink + Vector3.UP * 0.82, porcelain)
+	_geo.add_box_at(Vector3(0.12, 0.8, 0.12), sink + Vector3(-0.05, 0.4, 0), MatLib.surface(Palette.METAL, 0.3, 0.8))
+	_geo.add_cylinder(0.015, 0.015, 0.18, 6, Transform3D(Basis(Vector3.FORWARD, PI * 0.5), sink + Vector3(-0.1, 0.98, 0)), MatLib.surface(Palette.METAL, 0.2, 0.9))
+	BuildKit.box_collider_at(_body, Vector3(0.45, 0.9, 0.6), sink + Vector3.UP * 0.45)
+	# Toilet in the back corner, shower stall in the front one.
+	var toilet := Vector3(BATH_WEST + 0.35, y, BATH_Z.x + 0.4)
+	_geo.add_box_at(Vector3(0.4, 0.42, 0.5), toilet + Vector3.UP * 0.21, porcelain)
+	_geo.add_box_at(Vector3(0.18, 0.5, 0.48), toilet + Vector3(-0.13, 0.65, 0), porcelain)
+	BuildKit.box_collider_at(_body, Vector3(0.4, 0.9, 0.5), toilet + Vector3.UP * 0.45)
+	var shower := Vector3(BATH_WEST + 0.5, y, BATH_Z.y - 0.5)
+	_geo.add_box_at(Vector3(0.95, 0.06, 0.9), shower + Vector3.UP * 0.03, tile)
+	_geo.add_box_at(Vector3(0.03, 2.1, 0.9), shower + Vector3(0.48, 1.05, 0), MatLib.glass(Color(0.6, 0.9, 1.0, 0.18)))
+	_geo.add_bar(shower + Vector3(-0.42, 2.2, -0.35), shower + Vector3(-0.42, 2.2, 0.35), 0.03, MatLib.neon(Palette.CYAN, 3.0))
+	_geo.add_cylinder(0.08, 0.06, 0.03, 8, Transform3D(Basis.IDENTITY, shower + Vector3(-0.3, 2.15, 0)), MatLib.surface(Palette.METAL, 0.2, 0.9))
+	# Light, and a pink towel by the door.
+	BuildKit.omni(_root, center + Vector3(0.3, UPPER_HEIGHT - 0.6, 0), Palette.WARM_WHITE, 1.4, 4.5)
+	_geo.add_box_at(Vector3(0.04, 0.5, 0.3), Vector3(east - 0.04, y + 1.2, BATH_DOOR.x - 0.3), MatLib.surface(Palette.PINK.darkened(0.3), 0.9))
+	if not Engine.is_editor_hint():
+		Mirror.create(_root, Transform3D(Basis(Vector3.UP, PI * 0.5), Vector3(BATH_WEST + 0.03, y + 1.55, center.z)), Vector2(0.62, 0.82), Palette.PINK)
 
 
 func _build_bed(y: float) -> void:
@@ -594,7 +645,7 @@ func _build_clutter(y: float, half: float) -> void:
 	for i in 4:
 		var size := Vector3(_rng.randf_range(0.35, 0.6), _rng.randf_range(0.25, 0.45), _rng.randf_range(0.35, 0.5))
 		var level := 0.0 if i < 2 else 0.42
-		_geo.add_box(size, Transform3D(Basis(Vector3.UP, _rng.randf_range(-0.3, 0.3)), Vector3(2.2 + (i % 2) * 0.6, y + level + size.y * 0.5, -4.0)), cardboard)
+		_geo.add_box(size, Transform3D(Basis(Vector3.UP, _rng.randf_range(-0.3, 0.3)), Vector3(2.0 + (i % 2) * 0.55, y + level + size.y * 0.5, -0.62)), cardboard)
 	# A plant by the window and a poster above the bed.
 	var pot := Vector3(half - 0.6, y, -0.75)
 	_geo.add_cylinder(0.22, 0.18, 0.4, 8, Transform3D(Basis.IDENTITY, pot + Vector3.UP * 0.2), MatLib.surface(Color(0.2, 0.2, 0.22), 0.8))

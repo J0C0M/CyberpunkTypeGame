@@ -164,6 +164,12 @@ first person, paper doll, mirrors, small extras, p6 prep.
 - [x] Step 5: inventory paper doll: `ui/inventory_screen.gd` `_build_doll()` (SubViewport, own world, neon
   rim lights, stage, half resolution), the character in its outfit with the gun in hand, drag to turn,
   WORN list. Prototype 6 equips clothes here.
-- [ ] Step 6: mirrors
-- [ ] Step 7: photo booth, third person, lobby monitor, NPC comments
+- [x] Step 6: mirrors: `Mirror` (`scripts/world/mirror.gd`, `shaders/mirror.gdshader`): reflected camera with an
+  off-centre frustum (near plane = glass) into a 160 px SubViewport, sees layer 3 (head/arms) but not the
+  view model, renders only when the player is within 7 m in front; frame + vanity light. Placed in the new
+  bathroom of 1107 (`ApartmentBlock._build_bathroom`, doorway in the west wall), Lucky Pawn ("TRY IT ON")
+  and Cyberware ("CHECK YOUR CHROME"). Shots: `tests/shot_mirrors.tscn`; checks in `tests/test_world.tscn`.
+- [-] Step 7: photo booth, third person / photo mode (V), lobby security monitor, NPC comments on your look:
+  **moved to a later prototype at the user's request.** Save-slot portraits use the rendered headshot
+  (`CharacterPortrait`) until the photo booth exists.
 - [ ] Step 8: prototype 6 preparation, docs, merge

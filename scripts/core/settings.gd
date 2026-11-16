@@ -17,7 +17,7 @@ const FPS_CAPS: Array[int] = [0, 30, 60, 120, 144, 240]
 const REBINDABLE := [
 	["move_forward", "Move forward"], ["move_back", "Move back"], ["move_left", "Move left"], ["move_right", "Move right"],
 	["jump", "Jump"], ["sprint", "Sprint"], ["shoot", "Fire"], ["reload", "Reload"], ["interact", "Interact"],
-	["inventory", "Inventory"], ["quick_heal", "Quick heal"], ["toggle_view", "Third person / photo mode"],
+	["inventory", "Inventory"], ["quick_heal", "Quick heal"],
 	["weapon_1", "Weapon 1"], ["weapon_2", "Weapon 2"], ["weapon_3", "Weapon 3"],
 ]
 

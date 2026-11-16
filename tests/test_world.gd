@@ -32,6 +32,21 @@ func _ready() -> void:
 	var shadows := get_tree().root.find_children("*", "Light3D", true, false).filter(func(l: Light3D) -> bool: return l.shadow_enabled)
 	_check(shadows.size() >= 1, "lights near the player cast shadows (%d)" % shadows.size())
 
+	# Mirrors: three of them, rendering only while the player stands close in front.
+	var mirrors := get_tree().get_nodes_in_group("mirrors")
+	_check(mirrors.size() == 3, "mirrors in the bathroom, Lucky Pawn and Cyberware (%d)" % mirrors.size())
+	var mirror := mirrors[0] as Mirror
+	var viewport := mirror.get("_viewport") as SubViewport
+	await get_tree().process_frame
+	_check(viewport.render_target_update_mode == SubViewport.UPDATE_DISABLED, "a mirror far away doesn't render")
+	var spot := _player.global_position
+	_player.global_position = mirror.global_position + mirror.global_basis.z * 1.0 - Vector3.UP * 1.5
+	await get_tree().process_frame
+	await get_tree().process_frame
+	_check(viewport.render_target_update_mode == SubViewport.UPDATE_ALWAYS, "standing in front of it switches it on")
+	_player.global_position = spot
+	await get_tree().physics_frame
+
 	# Out of the noodle bar onto the street (the shop front faces +Z).
 	var start := _player.global_position
 	await _walk(Vector3(0, 0, 1), 3.0)

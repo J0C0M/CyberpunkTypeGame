@@ -227,6 +227,10 @@ func _decor_bar() -> void:
 
 
 func _decor_cyberware() -> void:
+	# Doc Ichi's mirror, for admiring new chrome.
+	if not Engine.is_editor_hint():
+		Mirror.create(_root, Transform3D(Basis(Vector3.UP, -PI * 0.5), Vector3(_half() - 0.03, 1.5, -2.6)), Vector2(0.8, 1.1), Palette.PURPLE)
+		BuildKit.neon_text(_root, "CHECK YOUR CHROME", Transform3D(Basis(Vector3.UP, -PI * 0.5), Vector3(_half() - 0.04, 2.25, -2.6)), Palette.CYAN, 0.12)
 	# Glass display cases with glowing implants.
 	for side: float in [-1.0, 1.0]:
 		var case_pos := Vector3(side * (_half() - 0.8), FLOOR_Y, -2.8)
@@ -298,6 +302,10 @@ func _decor_guns() -> void:
 
 
 func _decor_pawn() -> void:
+	# A tall mirror on the side wall: "try it on".
+	if not Engine.is_editor_hint():
+		Mirror.create(_root, Transform3D(Basis(Vector3.UP, PI * 0.5), Vector3(-_half() + 0.03, 1.35, -2.4)), Vector2(0.9, 1.7), Palette.AMBER)
+		BuildKit.neon_text(_root, "TRY IT ON", Transform3D(Basis(Vector3.UP, PI * 0.5), Vector3(-_half() + 0.04, 2.45, -2.4)), Palette.AMBER, 0.16)
 	_back_shelves(3, _junk)
 	# Security grille over the counter and a guitar on the wall.
 	var grille := MatLib.surface(Palette.METAL, 0.4, 0.8)
