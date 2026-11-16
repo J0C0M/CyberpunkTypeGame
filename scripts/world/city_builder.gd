@@ -24,13 +24,15 @@ const SHOP_NAMES := [
 const BLADE_NAMES := ["BAR", "HOTEL", "CLUB", "ZEN", "KOI", "LOVE", "DOJO", "ラーメン", "ホテル", "酒", "薬", "夜", "電気"]
 
 ## Lots whose ground floor (or more) is a walk-in interior scene instead of solid building.
-## Frontage index and the stretch along it, the scene, and optionally a fixed height and the
-## vertical ranges ("hollow") the interior fills; by default just the ground floor.
+## Frontage index and the stretch along it, the scene, and optionally a fixed height, the
+## vertical ranges ("hollow") the interior fills (by default just the ground floor) and how far
+## back from the street it reaches ("depth", by default a ShopInterior with its back wall); the
+## rest of the lot behind it is solid.
 const INTERIOR_LOTS := [
 	{"frontage": 0, "from": 9.0, "to": 18.0, "scene": "res://scenes/shops/noodle_shop.tscn", "height": 34.0},
-	{"frontage": 0, "from": 18.0, "to": 30.0, "scene": "res://scenes/world/sushi_cafe.tscn", "height": 42.0},
+	{"frontage": 0, "from": 18.0, "to": 30.0, "scene": "res://scenes/world/sushi_cafe.tscn", "height": 42.0, "depth": SushiCafe.DEPTH + 0.3},
 	{"frontage": 1, "from": -38.0, "to": -26.0, "scene": "res://scenes/shops/cyberware_shop.tscn"},
-	{"frontage": 1, "from": -26.0, "to": -9.0, "scene": "res://scenes/world/apartment_block.tscn", "height": 96.0, "hollow": [Vector2(0.0, 4.8), Vector2(35.7, 39.6)]},
+	{"frontage": 1, "from": -26.0, "to": -9.0, "scene": "res://scenes/world/apartment_block.tscn", "height": 96.0, "hollow": [Vector2(0.0, 4.8), Vector2(35.7, 39.6)], "depth": ApartmentBlock.BACK_DEPTH},
 	{"frontage": 2, "from": -32.0, "to": -20.0, "scene": "res://scenes/shops/gun_shop.tscn"},
 	{"frontage": 3, "from": 9.0, "to": 20.0, "scene": "res://scenes/shops/bar.tscn", "height": 24.0},
 	{"frontage": 3, "from": 20.0, "to": 32.0, "scene": "res://scenes/shops/clinic.tscn"},
@@ -340,6 +342,14 @@ func _build_building(geo: GeoBatch, xf: Transform3D, width: float, near: bool, i
 		y = maxf(y, gap.y)
 	if has_interior:
 		_place_interior(interior, xf, width)
+		# The interior only fills the front of the lot; close the rest of each hollow storey so
+		# its sides don't open onto the street.
+		var reach: float = interior.get("depth", ShopInterior.DEPTH + 0.3)
+		for gap: Vector2 in hollow:
+			var size := Vector3(width, gap.y - gap.x, depth - reach)
+			var at := _at(xf, width * 0.5, (gap.x + gap.y) * 0.5, -(reach + depth) * 0.5)
+			geo.add_box(size, at, facade)
+			BuildKit.box_collider(_body, size, at)
 	var top := height
 	if height > 25.0 and _rng.randf() < 0.45:
 		var setback_width := width * _rng.randf_range(0.5, 0.85)
