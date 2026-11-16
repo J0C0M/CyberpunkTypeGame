@@ -75,7 +75,7 @@ func rebuild() -> void:
 	var skin := Skin.new()
 	for i in CharacterRig.BONES.size():
 		skin.add_named_bind(String(CharacterRig.BONES[i][0]), skeleton.get_bone_global_rest(i).affine_inverse())
-	worn = Outfits.items(data.outfit) if show_outfit else []
+	worn = data.worn_items() if show_outfit else []
 	var covered := Wearables.covered_regions(worn)
 	for region: StringName in CharacterRig.REGIONS:
 		var body := CharacterMeshBuilder.new()

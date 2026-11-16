@@ -9,7 +9,8 @@ Living status file so work can be picked up in a new session. Updated with every
 - `Build-Third-Prototype`: prototype 3 = finishing prototype 2 + Part 1 (music); merged into `Development`.
 - `Build-Fourth-Prototype`: prototype 4; merged into `Development`.
 - `Fix-Dialogue-Scroll`: scrolling dialogue choices; merged into `Development`.
-- `Build-Fifth-Prototype`: prototype 5 (in progress, see below).
+- `Build-Fifth-Prototype`: prototype 5; merged into `Development`.
+- Next: `Build-Sixth-Prototype` (clothing and armour; see "Prototype 6 preparation" and HANDOFF.md).
 
 Commits are authored as J0C0M via one-off `git -c user.name=... -c user.email=...` flags
 (git config itself is empty on this machine). Godot 4.7.2 binary: `~/Downloads/Godot_v4.7.2-stable_linux.x86_64`.
@@ -103,7 +104,7 @@ User's combat direction (asked at the start): **street gang + police drones**, *
     walk-through test (`tests/test_world.tscn`), hallway end window/lining.
   - [x] Final re-tour of all viewpoints; merged into `Development`.
 
-## Prototype 5 (branch `Build-Fifth-Prototype`): in progress
+## Prototype 5 (branch `Build-Fifth-Prototype`): done and merged
 Brief: main menu, character creator, multi-character save slots, seeing your own character
 (first-person body, inventory paper doll, mirrors, photo booth, third person, lobby monitor, NPC
 comments) and preparation for prototype 6's clothing/armour. Order: model, creator, menu + saves,
@@ -172,4 +173,29 @@ first person, paper doll, mirrors, small extras, p6 prep.
 - [-] Step 7: photo booth, third person / photo mode (V), lobby security monitor, NPC comments on your look:
   **moved to a later prototype at the user's request.** Save-slot portraits use the rendered headshot
   (`CharacterPortrait`) until the photo booth exists.
-- [ ] Step 8: prototype 6 preparation, docs, merge
+- [x] Step 8: prototype 6 preparation (below), README/CREDITS/HANDOFF, merge into `Development`.
+
+### Prototype 6 preparation (Morrowind-style clothing and armour)
+Not built yet; the player model is set up for it:
+- **Attachment points:** `CharacterRig.SLOTS` -> a `BoneAttachment3D` "Slot_<slot>" with a "Mount" child per
+  slot (helmet, face, neck, chest, back, shoulder_l/r, forearm_l/r, hand_l/r, waist, hip_r, thigh_l/r,
+  shin_l/r, foot_l/r); `CharacterModel.slot(name)` returns the mount. The gun in hand already uses hand_r.
+- **Wear slots:** `CharacterRig.WEAR_SLOTS`: shirt, pants, shoes, gloves (CLOTHING), jacket (OUTER),
+  helmet, chest_armor, shoulders, gauntlets, greaves, boots (ARMOR), each with the regions it covers.
+- **Layer order:** `CharacterRig.WearLayer` UNDERWEAR (painted on the skin texture: the white underpants
+  with hearts, always there) -> CLOTHING (+1.2 cm) -> OUTER (+2.6 cm) -> ARMOR (+4.5 cm). Each region's
+  pieces of every layer are merged into one `Wear_<region>` mesh per region, so the first-person rules
+  (head/arms on render layer 3) and body masks work per region.
+- **Body masks:** `Wearables.covered_regions(worn)`: skin regions fully covered by a piece (share 1.0) are
+  hidden (`Skin_<region>.visible = false`); partial pieces (sleeves rolled up, boots over the shin) keep the
+  skin. `CharacterModel.is_covered(region)`; the first-person arms (`ViewArms`) follow the same rule.
+- **Items:** every clothing piece is an `ItemData` (category "clothing", `wear_slot`, `wear_layer`,
+  `assets/items/wear_*.tres`) with its geometry in `Wearables.PIECES` under the same id (regions + share,
+  colour, extras such as collars, studs and neon trim). The five starting outfits (`Outfits.PRESETS`) are
+  sets of these items; a new character gets them in the inventory (not sellable or droppable yet).
+- **What the model wears:** `CharacterData.worn` (item ids, saved with the character); empty = the starting
+  outfit's pieces. `CharacterModel` builds from `data.worn_items()` and `rebuild()` applies changes, so
+  equipping = edit `worn` + rebuild (the player body, the paper doll and the first-person arms).
+- Still to do in prototype 6: equip/unequip in the inventory (paper doll drop targets per wear slot), one
+  item per slot with layer rules, armour pieces (new Wearables entries + items, maybe stats), shops selling
+  clothes, and dropping/selling worn items.

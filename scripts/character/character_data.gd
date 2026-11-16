@@ -33,8 +33,16 @@ extends Resource
 @export_group("Tattoos and outfit")
 ## [{"design": StringName, "zone": StringName, "color": int, "glow": bool}]
 @export var tattoos: Array[Dictionary] = []
-## Item id of the starting outfit (an ItemData with category "clothing").
+## The starting outfit preset (Outfits.PRESETS).
 @export var outfit := &"outfit_street_runner"
+## Clothing item ids being worn, one per wear slot (prototype 6 fills this when equipping).
+## Empty means "the starting outfit's pieces".
+@export var worn: Array[StringName] = []
+
+
+## The clothing items the model should wear.
+func worn_items() -> Array:
+	return worn.duplicate() if not worn.is_empty() else Outfits.items(outfit)
 
 
 func to_dict() -> Dictionary:
@@ -50,7 +58,7 @@ func to_dict() -> Dictionary:
 		"brows": brows, "nose": nose, "mouth": mouth, "hair_style": hair_style, "hair_color": hair_color,
 		"facial_hair": facial_hair, "cyberware": chrome,
 		"muscle": muscle, "frame": frame, "height": height,
-		"tattoos": ink, "outfit": String(outfit),
+		"tattoos": ink, "outfit": String(outfit), "worn": worn.map(func(id: StringName) -> String: return String(id)),
 	}
 
 
@@ -80,6 +88,9 @@ static func from_dict(data: Dictionary) -> CharacterData:
 		if CharacterOptions.TATTOO_DESIGNS.has(design) and CharacterOptions.TATTOO_ZONES.has(zone):
 			c.tattoos.append({"design": design, "zone": zone, "color": clampi(int(tattoo.get("color", 0)), 0, CharacterOptions.TATTOO_COLORS.size() - 1), "glow": bool(tattoo.get("glow", false))})
 	c.outfit = StringName(data.get("outfit", c.outfit))
+	for id in data.get("worn", []):
+		if Wearables.PIECES.has(StringName(id)):
+			c.worn.append(StringName(id))
 	return c
 
 

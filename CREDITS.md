@@ -16,7 +16,8 @@ No third-party asset packs are used. Everything is original to this project:
 | All textures (bullet holes, steam puffs) | Generated at runtime in code | Project |
 | Shaders | Written for this project (`shaders/`) | Project |
 | Sound effects, footsteps and TV audio (`assets/audio/**`) | Synthesised by `tools/generate_sfx.py` | Project |
-| Music (`assets/music/*.ogg`, ten tracks) | Synthesised by `tools/generate_music.py` | Project |
+| Music (`assets/music/*.ogg`, eleven tracks including the menu theme) | Synthesised by `tools/generate_music.py` | Project |
+| Player characters, faces, tattoo designs, outfits | Generated in code (`scripts/character/`) | Project |
 | TV channels, brands and shows (NEO-7 News, Vantalume, Mecha-Koi Strike!!) | Invented for this project | Project |
 | Icon (`icon.svg`) | Made for this project | Project |
 
