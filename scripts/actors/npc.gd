@@ -1,5 +1,5 @@
 class_name Npc
-extends CharacterBody3D
+extends Person
 ## Pedestrian that wanders the sidewalks: picks a point on the navigation mesh, walks there with
 ## NavigationAgent3D (local avoidance keeps the crowd from bumping), idles, then picks the next.
 ## Loiterers stay near where they spawned and pause for longer, like people waiting outside shops.
@@ -8,7 +8,6 @@ extends CharacterBody3D
 @export var loiter := false
 
 @onready var agent: NavigationAgent3D = $NavigationAgent3D
-@onready var model: NpcModel = $Model
 
 var _gravity: float = ProjectSettings.get_setting("physics/3d/default_gravity")
 var _wait := 0.0
@@ -17,6 +16,7 @@ var _home := Vector3.ZERO
 
 
 func _ready() -> void:
+	super()
 	_home = global_position
 	agent.max_speed = walk_speed * 1.4
 	agent.velocity_computed.connect(_on_velocity_computed)
@@ -24,6 +24,8 @@ func _ready() -> void:
 
 
 func _physics_process(delta: float) -> void:
+	if is_dead:
+		return
 	if _wait > 0.0:
 		_wait -= delta
 		agent.velocity = Vector3.ZERO
@@ -40,6 +42,8 @@ func _physics_process(delta: float) -> void:
 
 
 func _on_velocity_computed(safe_velocity: Vector3) -> void:
+	if is_dead:
+		return
 	var delta := get_physics_process_delta_time()
 	velocity.x = safe_velocity.x
 	velocity.z = safe_velocity.z
@@ -49,7 +53,13 @@ func _on_velocity_computed(safe_velocity: Vector3) -> void:
 	if speed > 0.15:
 		rotation.y = lerp_angle(rotation.y, atan2(-velocity.x, -velocity.z), 1.0 - exp(-8.0 * delta))
 	_phase += delta * speed * 4.4
-	model.animate(_phase, clampf(speed / walk_speed, 0.0, 1.0))
+	model.pose(_phase, clampf(speed / walk_speed, 0.0, 1.0))
+
+
+func _on_died(hit: HitInfo) -> void:
+	super(hit)
+	agent.velocity = Vector3.ZERO
+	agent.avoidance_enabled = false
 
 
 func _pick_target() -> void:

@@ -198,6 +198,27 @@ def glass_shatter(rng):
     return normalize(lowpass(mix(crack, body, tinkles), 7000), 0.8)
 
 
+def body_hit(rng):
+    n = seconds(0.22)
+    thump = []
+    phase = 0.0
+    for i in range(n):
+        t = i / SAMPLE_RATE
+        phase += 2 * math.pi * (70 + 90 * math.exp(-t * 40)) / SAMPLE_RATE
+        thump.append(math.sin(phase) * math.exp(-t / 0.05))
+    slap = [s * e * 0.7 for s, e in zip(lowpass(noise(n, rng), 1600), envelope(n, 0.001, 0.025))]
+    return normalize(soft_clip(mix(thump, slap), 1.5), 0.7)
+
+
+def body_fall(rng):
+    n = seconds(0.7)
+    impact = [s * e for s, e in zip(lowpass(noise(n, rng), 500), envelope(n, 0.002, 0.09))]
+    thud = [math.sin(2 * math.pi * 55 * i / SAMPLE_RATE) * math.exp(-(i / SAMPLE_RATE) / 0.08) for i in range(n)]
+    rustle = [s * e * 0.25 for s, e in zip(highpass(lowpass(noise(n, rng), 3000), 600), envelope(n, 0.02, 0.18))]
+    second = place([v * 0.4 for v in impact[: seconds(0.2)]], 0.16, 0.7)
+    return normalize(mix(impact, thud, rustle, second), 0.65)
+
+
 def main():
     rng = random.Random(2077)
     write("rifle_shot.wav", rifle_shot(rng))
@@ -209,6 +230,8 @@ def main():
     write("dragon_hum.wav", dragon_hum(rng))
     write("glass_shatter_1.wav", glass_shatter(rng))
     write("glass_shatter_2.wav", glass_shatter(rng))
+    write("body_hit.wav", body_hit(rng))
+    write("body_fall.wav", body_fall(rng))
 
 
 if __name__ == "__main__":
