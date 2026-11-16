@@ -23,6 +23,7 @@ var _hurt_flash := 0.0
 var _damage: DamageIndicator
 var _flatline: Control
 var _wanted: WantedStars
+var _location: Label
 var _font: Font
 var _crosshair: Crosshair
 var _ammo_label: Label
@@ -242,6 +243,14 @@ func _refresh_hotbar() -> void:
 		_hotbar.add_child(box)
 
 
+func _on_clock_changed(text: String) -> void:
+	_location.text = "NEO-KABUKICHO  //  BLOCK 7  //  " + text
+
+
+func _on_credits_changed(amount: int) -> void:
+	_credits.text = "¢ %d" % amount
+
+
 func _on_ammo_changed(in_magazine: int, reserve: int) -> void:
 	_ammo_label.text = "%02d" % in_magazine
 	_reserve_label.text = "/ %03d" % reserve
@@ -319,7 +328,10 @@ func _build_texts(root: Control) -> void:
 	_hint.position = Vector2(28, 22)
 
 	var location := _label("NEO-KABUKICHO  //  BLOCK 7  //  " + GameState.clock_text(), 14, Palette.PINK, Palette.PINK.darkened(0.7))
-	GameState.clock_changed.connect(func(text: String) -> void: location.text = "NEO-KABUKICHO  //  BLOCK 7  //  " + text)
+	_location = location
+	# Methods, not lambdas: GameState outlives the HUD when the scene changes (menu <-> game), and
+	# a method connection is dropped automatically when the HUD is freed.
+	GameState.clock_changed.connect(_on_clock_changed)
 	root.add_child(location)
 	location.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
 	location.offset_left = -420
@@ -334,7 +346,7 @@ func _build_texts(root: Control) -> void:
 	_credits.offset_right = -28
 	_credits.offset_top = 44
 	_credits.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	GameState.credits_changed.connect(func(amount: int) -> void: _credits.text = "¢ %d" % amount)
+	GameState.credits_changed.connect(_on_credits_changed)
 	_credits.text = "¢ %d" % GameState.credits
 
 	_prompt = _label("", 20, Color.WHITE, Palette.CYAN.darkened(0.4))

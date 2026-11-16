@@ -46,6 +46,10 @@ var wanted := 0
 var character := CharacterData.new()
 ## Seconds played with this character (shown on save slots).
 var play_seconds := 0.0
+## The character's portrait as PNG bytes (a photo booth shot, or a rendered headshot).
+var portrait_png := PackedByteArray()
+## Named areas for save-slot locations: [label, global transform, box size] (smallest first).
+var areas: Array = []
 
 ## Empty while the player walks around; otherwise the name of whatever has taken over input
 ## ("trade", "dialogue", "seated"...). Main stops toggling the mouse and the player stops
@@ -131,6 +135,26 @@ func change_reputation(merchant_id: StringName, amount: float) -> void:
 
 func register_place(id: StringName, label: String, position: Vector3) -> void:
 	places[id] = {"label": label, "position": position}
+
+
+## Names an indoor area (a box around `xform`) for save-slot locations.
+func register_area(label: String, xform: Transform3D, size: Vector3) -> void:
+	areas.append([label, xform, size])
+	areas.sort_custom(func(a: Array, b: Array) -> bool: return (a[2] as Vector3).length_squared() < (b[2] as Vector3).length_squared())
+
+
+## Where `point` is, in words: an interior's name, a street, or the block.
+func location_name(point: Vector3) -> String:
+	for area in areas:
+		var local: Vector3 = (area[1] as Transform3D).affine_inverse() * point
+		var half: Vector3 = area[2] * 0.5
+		if absf(local.x) <= half.x and absf(local.y) <= half.y and absf(local.z) <= half.z:
+			return area[0]
+	if absf(point.z) < 9.0:
+		return "Kabuki Ave"
+	if absf(point.x) < 9.0:
+		return "Crow St"
+	return "Block 7"
 
 
 ## Shows a waypoint marker for a registered place on the HUD.

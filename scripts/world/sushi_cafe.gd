@@ -39,6 +39,7 @@ func _ready() -> void:
 	_build_lights(root)
 	if not Engine.is_editor_hint():
 		GameState.register_place(&"sushi", "Sushi Kaiten", global_transform * Vector3(0, 0, 2.0))
+		GameState.register_area("Sushi Kaiten", global_transform.translated_local(Vector3(0, HEIGHT * 0.5, -DEPTH * 0.5)), Vector3(WIDTH, HEIGHT + 0.6, DEPTH))
 		MusicZone.create(self, Vector3(WIDTH - 0.4, HEIGHT, DEPTH - 0.3), Vector3(0, HEIGHT * 0.5, -DEPTH * 0.5 - 0.15), preload("res://assets/music/sushi.ogg"), Vector3(-5.0, HEIGHT - 0.4, -10.0))
 
 

@@ -131,7 +131,25 @@ first person, paper doll, mirrors, small extras, p6 prep.
   Confirm -> `SaveGame.start_new_character()` (starts main.tscn). Menu music `assets/music/menu.ogg`
   (`Music.play_menu()`; `python3 tools/generate_music.py menu` regenerates one track).
   `GameState.character` (CharacterData) and `GameState.play_seconds`. Screenshots: `tests/shot_creator.tscn`.
-- [ ] Step 3: main menu, settings, save slots
+- [x] Step 3: main menu, settings, save slots
+  - `scenes/main_menu.tscn` (`ui/main_menu.gd`) is the main scene: live backdrop `scenes/ui/menu_backdrop.tscn`
+    (city + skyline + two dragons + rain + drifting camera `scripts/world/menu_camera.gd`) through the
+    retro filter; Continue / New Game / Load Game (characters with portraits, slots with label, location,
+    date, playtime, in-game time; load, delete with confirmation) / Settings / Credits / Quit.
+  - `SettingsMenu` (`ui/settings_menu.gd`) shared by main and pause menu: graphics (resolution, window mode,
+    retro strength -> `RetroScreen.apply_settings`, VSync, FPS cap), audio, controls (sensitivity, invert Y,
+    rebind keys/mouse/pad, reset), gameplay (FOV, head bob). Stored by `Settings` in settings.cfg.
+  - Pause menu: Resume, Save Game (new manual slot), Settings, Back to Main Menu (warns, save/not/cancel),
+    Save & Quit. Controller: focus everywhere, pad bindings for all actions, right stick look, LB/RB weapons.
+  - `SaveGame` v2: `user://saves/<character id>/<slot>.json` with meta/character/game/player/world;
+    `save_game(slot, label)`, `save_manual()` (max 10 manual), `list_characters()`, `list_slots()`,
+    `newest_save()`, `delete_slot()`, `load_slot()` -> Main `apply_pending()`, `return_to_menu()`,
+    `quit_game()`. Prototype-4 `savegame.json` converts to character "Tenant" (backup kept as
+    `savegame_v1_backup.json`); prototype 3 had no saves. Locations from `GameState.register_area()`.
+    Portrait: `CharacterPortrait.render()` until the photo booth (step 7).
+  - Tests: `tests/test_save.tscn` (slots, characters, delete, migration; uses user://test_saves),
+    `tests/test_flow.tscn` (menu -> creator -> game -> menu -> continue), `tests/shot_menu.tscn`.
+  - Fixed: HUD lambdas on GameState signals outlived the HUD across scene changes (now methods).
 - [ ] Step 4: first-person arms, body, shadow
 - [ ] Step 5: inventory paper doll
 - [ ] Step 6: mirrors

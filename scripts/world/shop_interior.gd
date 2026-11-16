@@ -61,6 +61,7 @@ func _ready() -> void:
 		merchant.transform = Transform3D(Basis(Vector3.UP, PI), Vector3(0, FLOOR_Y, COUNTER_Z - 1.1))
 	if not Engine.is_editor_hint():
 		GameState.register_place(place_id, place_label, global_transform * Vector3(0, 0, 2.0))
+		GameState.register_area(place_label, global_transform.translated_local(Vector3(0, HEIGHT * 0.5, -DEPTH * 0.5)), Vector3(width, HEIGHT + 0.6, DEPTH))
 		var tracks := ["noodle", "bar", "cyberware", "clinic", "guns", "pawn"]
 		var music := load("res://assets/music/%s.ogg" % tracks[theme]) as AudioStream
 		MusicZone.create(self, Vector3(width - 0.6, HEIGHT, DEPTH - 0.3), Vector3(0, HEIGHT * 0.5, -DEPTH * 0.5 - 0.15), music, Vector3(_half() - 0.5, HEIGHT - 0.4, -DEPTH + 0.6))

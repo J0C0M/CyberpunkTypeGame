@@ -5,6 +5,11 @@ const ScreenshotRunner := preload("res://scripts/debug/screenshot_runner.gd")
 const ScreenshotTour := preload("res://scripts/debug/screenshot_tour.gd")
 
 
+func _enter_tree() -> void:
+	# The buildings register their areas again as they are built.
+	GameState.areas.clear()
+
+
 func _ready() -> void:
 	var runner := ScreenshotRunner.from_cmdline()
 	if runner == null:
@@ -14,11 +19,28 @@ func _ready() -> void:
 		add_child(runner)
 	else:
 		set_mouse_captured(true)
-	# Screenshot tours and tests start from a fresh game and never touch the player's save.
+	if GameState.ui_mode == &"menu":
+		GameState.release_ui()
+	Music.play_menu(false)
+	var player := get_tree().get_first_node_in_group("player")
+	if player and player.has_method("apply_character"):
+		player.apply_character(GameState.character)
+	# Screenshot tours and tests start from a fresh game and never touch the player's saves.
 	if get_tree().has_meta("screenshot_mode"):
 		SaveGame.enabled = false
-	elif SaveGame.load_game():
-		get_tree().call_group("hud", "show_message", "Welcome back.", 2.5)
+	elif SaveGame.apply_pending():
+		get_tree().call_group("hud", "show_message", "Welcome back, %s." % GameState.character.character_name, 2.5)
+	elif SaveGame.enabled and GameState.character.character_id != "":
+		get_tree().call_group("hud", "show_message", "Welcome to Block 7, %s. Talk to Ren behind the counter." % GameState.character.character_name, 4.0)
+	if GameState.portrait_png.is_empty() and not get_tree().has_meta("screenshot_mode"):
+		_render_portrait()
+
+
+## A headshot for the save slots until the player takes a photo booth picture.
+func _render_portrait() -> void:
+	var image := await CharacterPortrait.render(self, GameState.character)
+	if image and GameState.portrait_png.is_empty():
+		GameState.portrait_png = image.save_png_to_buffer()
 
 
 func _input(event: InputEvent) -> void:

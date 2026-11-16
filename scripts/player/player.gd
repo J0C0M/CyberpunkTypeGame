@@ -58,6 +58,8 @@ var weapon: Firearm:
 
 var health: Damageable
 var is_dead := false
+## Who the player is (look, outfit); see apply_character().
+var character: CharacterData
 var is_sprinting := false
 ## The Interactable under the crosshair within reach, or null. The HUD shows its prompt.
 var focused_interactable: Interactable
@@ -195,8 +197,16 @@ func _quick_heal() -> void:
 ## Mouse look; called by Main for every captured mouse motion event.
 func look(relative: Vector2) -> void:
 	var sensitivity := Settings.mouse_sensitivity
+	var vertical := relative.y * (-1.0 if Settings.invert_y else 1.0)
 	rotate_y(-relative.x * sensitivity)
-	head.rotation.x = clampf(head.rotation.x - relative.y * sensitivity, deg_to_rad(-88.0), deg_to_rad(88.0))
+	head.rotation.x = clampf(head.rotation.x - vertical * sensitivity, deg_to_rad(-88.0), deg_to_rad(88.0))
+
+
+## Right stick look (controller), scaled like a fast mouse.
+func _stick_look(delta: float) -> void:
+	var stick := Vector2(Input.get_joy_axis(0, JOY_AXIS_RIGHT_X), Input.get_joy_axis(0, JOY_AXIS_RIGHT_Y))
+	if stick.length() > 0.15 and GameState.is_free_roaming():
+		look(stick * stick.length() * delta * 1400.0)
 
 
 ## Mouse wheel: next or previous weapon on the hotbar.
@@ -223,6 +233,7 @@ func apply_knockback(impulse: Vector3) -> void:
 
 
 func _physics_process(delta: float) -> void:
+	_stick_look(delta)
 	_update_health(delta)
 	if is_dead:
 		_update_camera_effects(delta)
@@ -254,6 +265,11 @@ func _physics_process(delta: float) -> void:
 	footsteps.update(self, delta, Vector2(global_position.x - before.x, global_position.z - before.z).length())
 	_update_interaction()
 	_update_camera_effects(delta)
+
+
+## Takes on a character's look (the first-person body comes in with CharacterModel).
+func apply_character(data: CharacterData) -> void:
+	character = data
 
 
 func save_data() -> Dictionary:
@@ -310,11 +326,12 @@ func _update_camera_effects(delta: float) -> void:
 		return
 	# The bob follows the footstep phase (one dip per step), so steps and bob line up.
 	var speed := Vector2(velocity.x, velocity.z).length() if is_on_floor() else 0.0
-	_bob_strength = lerpf(_bob_strength, clampf(speed / walk_speed, 0.0, 1.5) * bob_amount, 1.0 - exp(-8.0 * delta))
+	var bob := bob_amount if Settings.head_bob else 0.0
+	_bob_strength = lerpf(_bob_strength, clampf(speed / walk_speed, 0.0, 1.5) * bob, 1.0 - exp(-8.0 * delta))
 	var phase := footsteps.phase
 	camera.position = _camera_rest + Vector3(cos(phase) * _bob_strength * 0.5, absf(sin(phase)) * _bob_strength, 0.0)
 
-	var target_fov := base_fov + (sprint_fov_boost if is_sprinting else 0.0)
+	var target_fov := Settings.fov + (sprint_fov_boost if is_sprinting else 0.0)
 	camera.fov = lerpf(camera.fov, target_fov, 1.0 - exp(-6.0 * delta))
 
 	_recoil = _recoil.lerp(Vector2.ZERO, 1.0 - exp(-9.0 * delta))

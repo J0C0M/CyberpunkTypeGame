@@ -72,9 +72,13 @@ func _ready() -> void:
 	_geo.build_into(_root, "BlockGeometry")
 	if not Engine.is_editor_hint():
 		GameState.register_place(&"apartment", "Neo-Heights 1107", global_transform * Vector3(0, 0, 2.0))
+		var half := _half()
+		GameState.register_area("Neo-Heights lobby", global_transform.translated_local(Vector3(0, LOBBY_HEIGHT * 0.5, (HALL_BACK_Z - CAB_DEPTH) * 0.5)), Vector3(width, LOBBY_HEIGHT + 0.6, -HALL_BACK_Z + CAB_DEPTH))
+		GameState.register_area("Neo-Heights, 11th floor", global_transform.translated_local(Vector3(0, UPPER_Y + UPPER_HEIGHT * 0.5, (HALL_FRONT_Z + HALL_BACK_Z - CAB_DEPTH) * 0.5)), Vector3(width, UPPER_HEIGHT + 0.6, HALL_FRONT_Z - HALL_BACK_Z + CAB_DEPTH))
+		GameState.register_area("Apartment 1107", global_transform.translated_local(Vector3((APARTMENT_X + half) * 0.5, UPPER_Y + UPPER_HEIGHT * 0.5, HALL_FRONT_Z * 0.5)), Vector3(half - APARTMENT_X, UPPER_HEIGHT + 0.6, -HALL_FRONT_Z))
 		# Where the player wakes up after sleeping or a flatline: next to the bed.
 		GameState.places[&"respawn_home"] = {"label": "", "position": to_global(Vector3(3.9, UPPER_Y + 0.05, -2.2)), "yaw": global_rotation.y + PI}
-		GameState.night_passed.connect(func() -> void: _fridge_stocked = true)
+		GameState.night_passed.connect(_restock_fridge)
 		_add_music_zones()
 		add_to_group("saveable")
 		add_to_group("seat")
@@ -620,7 +624,7 @@ func _sleep(player: Player) -> void:
 	player.rotation.y = global_rotation.y + PI
 	player.head.rotation.x = 0.0
 	await get_tree().create_timer(1.0).timeout
-	var saved := SaveGame.save_game()
+	var saved := SaveGame.save_game(SaveGame.AUTOSAVE, "Slept in 1107")
 	get_tree().call_group("hud", "show_message", "You slept six hours. The city tidied up and the shops restocked." + ("\nGame saved." if saved else ""), 4.0)
 	await hud.fade_to(0.0, 1.2).finished
 	GameState.release_ui()
@@ -698,6 +702,10 @@ func _take_soda(_player: Player) -> void:
 		return
 	_fridge_stocked = false
 	get_tree().call_group("hud", "notify_item", "+ Synth-Soda", ItemDB.color(&"synth_soda"))
+
+
+func _restock_fridge() -> void:
+	_fridge_stocked = true
 
 
 func save_key() -> String:

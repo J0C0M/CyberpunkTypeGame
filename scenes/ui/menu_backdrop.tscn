@@ -1,0 +1,62 @@
+[gd_scene format=3]
+
+[ext_resource type="Environment" path="res://assets/environment/night_city_environment.tres" id="1_env"]
+[ext_resource type="PackedScene" path="res://scenes/world/city.tscn" id="2_city"]
+[ext_resource type="PackedScene" path="res://scenes/world/skyline.tscn" id="3_skyline"]
+[ext_resource type="Script" path="res://scripts/world/flight_path.gd" id="4_flight"]
+[ext_resource type="PackedScene" path="res://scenes/actors/robot_dragon.tscn" id="5_dragon"]
+[ext_resource type="AudioStream" path="res://assets/audio/dragon_hum.wav" id="6_hum"]
+[ext_resource type="Script" path="res://scripts/world/menu_camera.gd" id="7_camera"]
+
+[node name="MenuBackdrop" type="Node3D"]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = ExtResource("1_env")
+
+[node name="Moonlight" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.866025, 0.25, -0.433013, 0, 0.866025, 0.5, 0.5, -0.433013, 0.75, 0, 20, 0)
+light_color = Color(0.5, 0.58, 1, 1)
+light_energy = 0.12
+
+[node name="City" parent="." instance=ExtResource("2_city")]
+
+[node name="Skyline" parent="." instance=ExtResource("3_skyline")]
+
+[node name="MainStreetLoop" type="Path3D" parent="."]
+script = ExtResource("4_flight")
+waypoints = PackedVector2Array(-440, 0, -330, 0, -220, 0, -110, 0, 0, 0, 110, 0, 220, 0, 330, 0, 440, 0, 540, -110, 450, -230, 200, -260, -200, -260, -450, -230, -540, -110)
+altitude = 38.0
+altitude_variation = 6.0
+clearance = 25.0
+obstacle_radius = 8.0
+samples = 150
+obstacle_sources = Array[NodePath]([NodePath("../City"), NodePath("../Skyline")])
+
+[node name="InnerLoop" type="Path3D" parent="."]
+script = ExtResource("4_flight")
+radius = Vector2(150, 125)
+altitude = 85.0
+altitude_variation = 20.0
+clearance = 25.0
+obstacle_sources = Array[NodePath]([NodePath("../City"), NodePath("../Skyline")])
+
+[node name="MainStreetDragon" parent="." instance=ExtResource("5_dragon")]
+hum = ExtResource("6_hum")
+flight_path = NodePath("../MainStreetLoop")
+speed = 22.0
+segment_count = 28
+body_scale = 1.25
+wave_amplitude = 1.3
+start_offset = 0.48
+head_light = true
+
+[node name="BlockDragon" parent="." instance=ExtResource("5_dragon")]
+flight_path = NodePath("../InnerLoop")
+speed = 20.0
+segment_count = 30
+body_scale = 2.0
+accent_color = Color(0.62, 0.28, 1, 1)
+eye_color = Color(1, 0.58, 0.12, 1)
+
+[node name="Camera3D" type="Camera3D" parent="."]
+script = ExtResource("7_camera")
