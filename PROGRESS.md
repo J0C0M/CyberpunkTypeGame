@@ -12,6 +12,8 @@ Living status file so work can be picked up in a new session. Updated with every
 - `Build-Fifth-Prototype`: prototype 5; merged into `Development`.
 - `Fix-Holes-Near-Noodle-Bar`: closed the ground-floor gaps behind interiors that let the player leave
   the level; merged into `Development`.
+- `Fix-Portrait-Look-At`: the save-slot portrait camera no longer calls `look_at()` outside the tree;
+  merged into `Development`.
 - Next: `Build-Sixth-Prototype` (clothing and armour; see "Prototype 6 preparation" and HANDOFF.md).
 
 Commits are authored as J0C0M via one-off `git -c user.name=... -c user.email=...` flags
