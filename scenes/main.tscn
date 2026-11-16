@@ -5,6 +5,7 @@
 [ext_resource type="Shader" path="res://shaders/retro_post.gdshader" id="3_post"]
 [ext_resource type="PackedScene" path="res://scenes/world/world.tscn" id="4_world"]
 [ext_resource type="PackedScene" path="res://ui/hud.tscn" id="5_hud"]
+[ext_resource type="PackedScene" path="res://ui/trade_screen.tscn" id="6_trade"]
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_post"]
 shader = ExtResource("3_post")
@@ -33,3 +34,5 @@ render_target_update_mode = 4
 [node name="World" parent="RetroScreen/SubViewport" instance=ExtResource("4_world")]
 
 [node name="HUD" parent="." instance=ExtResource("5_hud")]
+
+[node name="TradeScreen" parent="." instance=ExtResource("6_trade")]

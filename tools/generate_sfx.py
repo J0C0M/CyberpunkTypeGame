@@ -306,6 +306,23 @@ def chime(rng, notes, length=0.35):
     return normalize(lowpass(out, 5000), 0.45)
 
 
+def cash_register(rng):
+    coins = [place(metal_ping(rng, [(rng.uniform(3000, 4200), 0.5), (rng.uniform(5200, 6800), 0.25)], 0.05, 0.2), k * 0.055, 0.6) for k in range(4)]
+    bell = place(chime(rng, [1568], 0.4), 0.22, 0.6)
+    return normalize(mix(*coins, bell), 0.5)
+
+
+def ui_blip(rng, freq, length=0.06):
+    n = seconds(length)
+    return normalize([math.sin(2 * math.pi * freq * i / SAMPLE_RATE) * math.exp(-(i / SAMPLE_RATE) / (length * 0.4)) for i in range(n)], 0.3)
+
+
+def ui_deny(rng):
+    n = seconds(0.22)
+    out = [(1 if math.sin(2 * math.pi * 140 * i / SAMPLE_RATE) > 0 else -1) * math.exp(-(i / SAMPLE_RATE) / 0.08) for i in range(n)]
+    return normalize(lowpass(out, 1800), 0.3)
+
+
 def main():
     rng = random.Random(2077)
     write("rifle_shot.wav", rifle_shot(rng))
@@ -328,6 +345,9 @@ def main():
     write("explosion.wav", explosion(rng))
     write("fire_loop.wav", fire_loop(rng))
     write("pickup.wav", chime(rng, [880, 1320]))
+    write("trade_cash.wav", cash_register(rng))
+    write("ui_click.wav", ui_blip(rng, 1200))
+    write("ui_deny.wav", ui_deny(rng))
 
 
 if __name__ == "__main__":

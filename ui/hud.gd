@@ -25,6 +25,8 @@ var _elapsed := 0.0
 
 func _ready() -> void:
 	add_to_group("hud")
+	# Keep updating while menus pause the game, so prompts and the crosshair hide properly.
+	process_mode = Node.PROCESS_MODE_ALWAYS
 	_font = _make_font()
 	var root := Control.new()
 	root.name = "Root"

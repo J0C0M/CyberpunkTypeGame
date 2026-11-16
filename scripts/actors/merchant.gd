@@ -79,6 +79,55 @@ func restock() -> void:
 	cash = profile["credits"]
 
 
+## What the merchant asks for one pack of `id` (markup, mood and reputation included).
+func sell_price(id: StringName) -> int:
+	var profile := ShopCatalog.profile(catalog)
+	var mood := 1.0 + (0.25 if anger_time > 0.0 else 0.0) + (0.15 if annoyed_time > 0.0 else 0.0)
+	var price := ItemDB.base_price(id) * ItemDB.pack_size(id) * float(profile["markup"]) * mood * (1.0 - 0.12 * reputation())
+	return maxi(1, roundi(price))
+
+
+## What the merchant pays for one pack of `id`. Items they don't deal in fetch half as much.
+func buy_price(id: StringName) -> int:
+	var profile := ShopCatalog.profile(catalog)
+	var rate: float = profile["buyback"]
+	if not (profile["likes"] as Array).has(ItemDB.category(id)):
+		rate *= 0.5
+	var mood := 0.8 if anger_time > 0.0 else 1.0
+	var price := ItemDB.base_price(id) * ItemDB.pack_size(id) * rate * mood * (1.0 + 0.12 * reputation())
+	return maxi(1, roundi(price))
+
+
+## Moves one pack from the merchant to the player for `price`. Returns an error line or "".
+func sell_to_player(id: StringName, price: int) -> String:
+	var pack := ItemDB.pack_size(id)
+	if stock.count(id) < pack:
+		return "Sold out."
+	if GameState.credits < price:
+		return "You're short. That's %d ¢." % price
+	GameState.spend_credits(price)
+	cash += price
+	stock.remove(id, pack)
+	GameState.inventory.add(id, pack)
+	GameState.change_reputation(merchant_id, 0.02)
+	return ""
+
+
+## Moves one pack from the player to the merchant for `price`. Returns an error line or "".
+func buy_from_player(id: StringName, price: int) -> String:
+	var pack := ItemDB.pack_size(id)
+	if GameState.inventory.count(id) < pack:
+		return "That's not a full box." if pack > 1 else "You don't have that."
+	if cash < price:
+		return "Can't afford it. Till's down to %d ¢." % cash
+	cash -= price
+	stock.add(id, pack)
+	GameState.inventory.remove(id, pack)
+	GameState.add_credits(price)
+	GameState.change_reputation(merchant_id, 0.02)
+	return ""
+
+
 ## Comes back to life behind the counter, calm and restocked (after the player sleeps).
 func revive() -> void:
 	if is_dead:
