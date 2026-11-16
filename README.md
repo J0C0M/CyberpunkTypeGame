@@ -171,9 +171,21 @@ after adding scripts with a new `class_name`:
 godot --headless --path . res://tests/test_inventory.tscn
 ```
 
-The tests are `test_inventory`, `test_save`, `test_health`, `test_weapons`, `test_gang` and
-`test_police`. The `shot_*.tscn` scenes render screenshots instead (run them windowed with
-`-- --out=/tmp/prefix`). Tests and screenshot runs never read or write your save.
+The tests are `test_inventory`, `test_save`, `test_health`, `test_weapons`, `test_gang`,
+`test_police`, `test_world` (walking through doors and the elevator) and `test_crowd` (how often
+pedestrians get stuck). The `shot_*.tscn` scenes render screenshots instead (run them windowed with
+`-- --out=/tmp/prefix`), `perf_bench.tscn` prints frame times for an explosion and a firefight, and
+`test_quit.tscn` checks for a clean exit. Tests and screenshot runs never read or write your save.
+
+Screenshot tour of the whole block (27 viewpoints: spawn, streets, every shop inside and out, the
+cafe, lobby, elevator, hallway, apartment, the gang corner, the skyline), saved as
+`<prefix>_<nn>_<name>.png`:
+
+```bash
+godot --path . -- --tour=/tmp/tour
+```
+
+Add `--only=lobby,hallway` to shoot just those views. Bugs found with it are in `BUGFIX_NOTES.md`.
 
 ## Known limitations
 

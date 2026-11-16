@@ -1,15 +1,16 @@
 # Handoff: context for the next Claude Code session
 
 Read this file, `PROGRESS.md`, `README.md`, `git log --oneline -40` and `git status` before doing anything.
-This file explains how the project is built, the rules for working in it, and the full brief for the
-next prototype (prototype 4: inventory + save system, a bug-hunt pass, and combat).
+This file explains how the project is built and the rules for working in it. Prototype 4 (inventory +
+save system, combat, bug hunt) is done; section 5 keeps its brief for reference and section 6 has a
+proposal for prototype 5 that still needs the user's go-ahead.
 
 ## 1. Project at a glance
 - Godot **4.7.2**, GDScript, Forward+ renderer. The binary is **not on PATH**:
   `~/Downloads/Godot_v4.7.2-stable_linux.x86_64`. Machine: Linux (Wayland, DISPLAY=:0), RTX 4070 SUPER.
 - A low-poly, always-night neon city block ("Neo-Kabukicho // Block 7") seen through a 360p retro filter.
   Almost everything visual is **generated in code** by `@tool` builder scripts (no imported models).
-- Prototypes 1, 2 and 3 are merged into `Development`. `main` holds only the initial commit.
+- Prototypes 1 to 4 are merged into `Development`. `main` holds only the initial commit.
 
 ## 2. Git rules (follow exactly)
 1. Commit after every meaningful step; small commits, clear English messages.
@@ -20,7 +21,7 @@ next prototype (prototype 4: inventory + save system, a bug-hunt pass, and comba
 3. Never change the git identity, never turn off commit signing.
 4. Never add "Co-Authored-By: Claude" or any mention of Claude/Anthropic to commits or PRs.
 5. Branches: create one branch from `Development` per request, English words with hyphens, every word
-   capitalised (next one: `Build-Fourth-Prototype`). When finished and tested, merge it into `Development`
+   capitalised (next one: `Build-Fifth-Prototype`). When finished and tested, merge it into `Development`
    with `--no-ff` and push. **Never commit, push or merge to `main`.**
 6. Push to `origin` (git@github.com:J0C0M/CyberpunkTypeGame.git).
 7. Keep `PROGRESS.md` updated with every commit (done / in progress / left), so a new chat can resume.
@@ -33,6 +34,9 @@ $G --headless --path . --quit-after 120         # smoke test; must print no erro
 $G --path . -- --shots=/tmp/s --views="x,y,z,yaw,pitch;..." --frames=40 [--fire-frames=5]   # screenshots
 ```
 - Headless runs print harmless `AudioStreamPlayback ... leaked` lines at exit (dummy audio driver); ignore them.
+- Tests live in `tests/` (`test_*.tscn` headless, `shot_*.tscn` windowed screenshots, `perf_bench.tscn`);
+  run every `test_*.tscn` before merging. After adding a script with a new `class_name`, run `--import`
+  once or the tests can't see the class. Whole-block screenshot tour: `$G --path . -- --tour=/tmp/tour`.
 - `--script` mode does **not** load autoloads. For scripted tests, wrap a `extends Node` test script in a tiny
   `.tscn` and run that scene (`$G --headless --path . /path/to/test_runner.tscn`); for screenshots run it
   without `--headless`. Set `get_tree().set_meta("screenshot_mode", true)` to hide the "click to play" overlay.
@@ -44,9 +48,11 @@ $G --path . -- --shots=/tmp/s --views="x,y,z,yaw,pitch;..." --frames=40 [--fire-
 - `scenes/main.tscn`: root. `RetroScreen` (SubViewportContainer, low-res SubViewport with the 3D world),
   then CanvasLayers: `HUD`, `TradeScreen`, `DialogueScreen`, `PauseMenu` (UI stays sharp, outside the filter).
   Mouse motion is routed from `scripts/main.gd` to the player (captured motion doesn't cross the container).
-- **Autoloads** (project.godot): `EventBus` (danger events + `person_killed`), `GameState` (ui_mode, credits,
-  `inventory: Inventory`, reputation, places/waypoints, flags, clock, `pass_night()`), `Settings` (bus volumes,
-  mouse sensitivity, user://settings.cfg), `Music` (street music, MusicZones, ducking, muffle).
+- **Autoloads** (project.godot): `EventBus` (danger events with a `source` + `person_killed`), `GameState`
+  (ui_mode, credits, `inventory: Inventory` (30 slots), reputation, places/waypoints, flags, clock,
+  `pass_night()`, timed `effects`, `use_item()`, `wanted`), `Settings` (bus volumes, mouse sensitivity,
+  user://settings.cfg), `Music` (street music, MusicZones, ducking, muffle), `SaveGame` (user://savegame.json,
+  "saveable" group, `quit_game()` saves and exits cleanly).
 - **Input ownership:** `GameState.claim_ui(mode, free_mouse)` / `release_ui()`. While `ui_mode != ""` the player
   can't move or interact and Main ignores Esc. Modes in use: trade, dialogue, paused, seated, sleeping, elevator.
 - **Damage:** `scripts/combat/` — `HitInfo`, `Damageable` (`register(collider, target, zone, multiplier)`,
@@ -56,11 +62,16 @@ $G --path . -- --shots=/tmp/s --views="x,y,z,yaw,pitch;..." --frames=40 [--fire-
   by EventBus), `npc.gd` (wander/flee/cower on a runtime-baked sidewalk navmesh, `npc_crowd.gd`),
   `merchant.gd` (trade, bartering `judge_*_offer`, mood, reputation, revive/restock), `npc_model.gd`
   (box humanoid, `pose(phase, walk, run, cower, limp)`).
-- **Weapon:** `scripts/weapons/rifle.gd` (KS-47 hitscan; reserve ammo = `GameState.inventory` item
-  `ammo_ks47`), `rifle_model.gd` (view model on render layer 2). The rifle sits under
-  `Player/Head/RecoilPivot/Camera3D/WeaponHolder`; the player exposes `weapon`.
-- **Items/economy:** `scripts/items/item_db.gd` (const dictionary of items: name, category, price, pack, desc),
-  `inventory.gd`, `shop_catalog.gd` (merchant stock profiles), `pickup.gd` (loot, `Pickup.spawn/drop_loot`).
+- **Weapons:** `scripts/weapons/firearm.gd` (`Firearm`: any hitscan gun, settings per scene: rifle/pistol/
+  shotgun `.tscn`), bullets through `Hitscan.shoot` (`scripts/combat/hitscan.gd`, also used by enemies).
+  `WeaponHolder` (hotbar, keys 1-3/wheel) under `Player/Head/RecoilPivot/Camera3D`; it syncs to weapon items
+  (`ItemData.weapon_scene`). The player exposes `weapon` (gun in hand), `weapon_holder`, `health` (Damageable).
+- **Items/economy:** one `ItemData` resource per item in `assets/items/`, loaded by `ItemDB` (static helpers);
+  `ShopProfile` resources in `assets/shops/` loaded by `ShopCatalog`; `ItemModels` (low-poly item models),
+  `ItemIcons` (renders icons once), `Pickup`, `ItemScatter`. UI: `ui/inventory_screen.gd`, `ui/item_slot.gd`.
+- **Enemies:** `GangMember` (Person subclass) + `GangTurf` (Rust Jackals, west end of the main street) on the
+  `EnemyNav` navmesh (layer 2, baked from colliders); `PoliceDispatch` (heat/wanted stars) + `PoliceDrone`.
+  Cover = "cover" group (`Car`, `BreakableProp` >= 0.8 m, `CoverBlock`) with `cover_outline()`.
 - **Interaction:** `scripts/interaction/interactable.gd` (Area3D on layer 6 with prompt / `prompt_source`),
   `door.gd`. Player casts a ray (mask world|props|interact) and shows `[E] prompt`.
 - **World builders:** `scripts/world/city_builder.gd` (streets, frontages, `INTERIOR_LOTS` table that places
@@ -77,7 +88,8 @@ $G --path . -- --shots=/tmp/s --views="x,y,z,yaw,pitch;..." --frames=40 [--fire-
   6 interact, 7 debris. Rifle ray mask = 1|4|8|16 with `collide_with_areas = true`.
 - **Groups used by systems:** player, hud, city, resettable (`reset()`), merchants (`revive()`),
   night_cleanup (`clear_for_new_night()`), music_zones, impact_effects, debris_pool, sfx_pool, explosions,
-  trade_screen, dialogue_screen, pause_menu.
+  trade_screen, dialogue_screen, pause_menu, inventory_screen, saveable (`save_key/save_data/load_data`),
+  cover, enemies (`on_player_respawned()`), police (`clear_heat()`), police_drones, gang_turf, seat.
 - **Gotchas learned the hard way:** don't name enums after native classes (`Theme`, `Material`); type loop
   variables over literal arrays (`for side: float in [-1.0, 1.0]`); avoid multi-line lambdas inside call
   arguments; PS1 vertex snapping fades with distance (big triangles warp otherwise); use `flat` varyings for
@@ -142,4 +154,18 @@ methodically**, and record what you find and how you fixed it in `BUGFIX_NOTES.m
 ### When done
 Merge `Build-Fourth-Prototype` into `Development`, push, and give the user a short summary: what's built, new
 controls, bugs fixed, known remaining problems, and a proposal for the next prototype (story, new levels and
-other atmospheres).
+other atmospheres). **Done:** see PROGRESS.md and BUGFIX_NOTES.md.
+
+## 6. Proposal for prototype 5 (not agreed with the user yet; ask before starting)
+- **Story, act 1, "Rent Paid":** who paid the rent on 1107? A short quest line through Ren, the terminal in
+  the apartment and Doc Ichi's data shards: a data shard with a message for "the tenant of 1107", a
+  courier job for Kaz, and a deal with (or against) the Rust Jackals. Needs a small quest system (quest log
+  in the inventory screen, objectives on the HUD waypoint, flags in GameState) and a few new dialogue trees.
+- **A second level with its own atmosphere:** the "Undercity" below Block 7: a flooded maintenance tunnel and
+  night market under the overpass (green and amber light, steam, dripping water, a different music track),
+  reached through a service door by the Jackals' barricade or the Neo-Heights basement. Loaded as its own
+  scene with a transition, which needs the save system to remember which level the player is in.
+- **Rooftops:** the Neo-Heights roof via the elevator (a third stop): wind, rain, the dragons up close, a
+  sniper-perch encounter with police drones.
+- **Smaller follow-ups:** the gang reacting to the player's reputation (a truce after the courier job), a
+  bounty board at the Koi Bar, weather (rain on/off per night), and controller support.

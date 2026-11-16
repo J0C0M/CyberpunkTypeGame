@@ -80,5 +80,5 @@ clustered-element limit, so lights don't pop from cluster limits. The enemy navm
 - Gang damage depends on how close the crew stands: about 2.5-7.5 HP/s against all four in the open.
 - Pedestrians can still be pushed briefly against each other by crowd avoidance (under 1 % of their
   walking time); they recover on their own.
-- The gang, the drones and the player's bullets don't check the Jackals' friendly fire with drones:
-  a drone can be hit by a Jackal standing in the line of fire (rare, and arguably fine).
+- A Jackal's stray bullet can hit a police drone in its line of fire, and the other way round (rare,
+  and arguably fine).

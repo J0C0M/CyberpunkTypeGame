@@ -7,7 +7,8 @@ Living status file so work can be picked up in a new session. Updated with every
 - `Development`: prototypes 1 and 2 merged.
 - `Build-Second-Prototype`: prototype 2 (merged into `Development`).
 - `Build-Third-Prototype`: prototype 3 = finishing prototype 2 + Part 1 (music); merged into `Development`.
-- `Build-Fourth-Prototype`: prototype 4 (in progress, see below).
+- `Build-Fourth-Prototype`: prototype 4; merged into `Development`.
+- Next: prototype 5 (not briefed yet; see the proposal in HANDOFF.md).
 
 Commits are authored as J0C0M via one-off `git -c user.name=... -c user.email=...` flags
 (git config itself is empty on this machine). Godot 4.7.2 binary: `~/Downloads/Godot_v4.7.2-stable_linux.x86_64`.
@@ -34,7 +35,7 @@ Ren the guide with dialogue and waypoints, reworked footsteps, Neo-Heights lobby
     muffled outside / clear inside; zones in every shop, cafe, lobby, elevator cab, hallway (quiet),
     apartment radio (fades while the TV is on).
   - `Settings` autoload + `ui/pause_menu.gd` (Esc): bus volumes, mouse sensitivity, saved to user://settings.cfg.
-## Prototype 4 (branch `Build-Fourth-Prototype`): in progress
+## Prototype 4 (branch `Build-Fourth-Prototype`): done and merged
 User's combat direction (asked at the start): **street gang + police drones**, **forgiving** difficulty,
 **pistol + shotgun** next to the KS-47.
 
@@ -91,7 +92,7 @@ User's combat direction (asked at the start): **street gang + police drones**, *
     "Who are the Rust Jackals?" topic. Test: `tests/test_police.tscn`; shots: `tests/shot_police.tscn`.
   - [x] B5 Balance (forgiving: ~5 HP/s from all four Jackals in the open, ~3 HP/s from two drones, 5 s
     regen delay), README controls/features/tests, CREDITS.
-- Part C: bug hunt (BUGFIX_NOTES.md): **in progress**
+- Part C: bug hunt (BUGFIX_NOTES.md): **done**
   - [x] Errors/warnings: exit leaks (audio) fixed via `SaveGame.quit_game()`; stale deferred ammo signal.
   - [x] Screenshot tour `-- --tour=<prefix>` (`scripts/debug/screenshot_tour.gd`), 27 viewpoints; fixed door
     orientation, sign poles through text, dark lobby/hallway/cyberware/gun shop, stale prompts.
@@ -99,4 +100,4 @@ User's combat direction (asked at the start): **street gang + police drones**, *
   - [x] Explosions blocked by walls; seated look-around; flatline while seated / in the elevator.
   - [x] Performance (`tests/perf_bench.tscn`: 1.3-1.6 ms average, worst 2.7 ms), UI at 4:3 and 21:9,
     walk-through test (`tests/test_world.tscn`), hallway end window/lining.
-  - [ ] Final re-tour of all viewpoints, merge.
+  - [x] Final re-tour of all viewpoints; merged into `Development`.
