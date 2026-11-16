@@ -7,7 +7,7 @@ extends Resource
 
 @export var id := &""
 @export var display_name := ""
-## weapon, ammo, food, drink, medical, junk, valuable, cyberware or key.
+## weapon, ammo, food, drink, medical, junk, valuable, cyberware, clothing or key.
 @export var category := &"junk"
 @export var price := 1
 ## Units that change hands per trade (ammo comes in boxes).
@@ -34,6 +34,12 @@ extends Resource
 @export var use_verb := "Use"
 ## HUD tag while the effect lasts ("SUGAR RUSH").
 @export var effect_label := ""
+
+@export_group("Wearing")
+## For clothing and armour: the wear slot (CharacterRig.WEAR_SLOTS) and layer
+## (CharacterRig.WearLayer). The geometry is defined in Wearables under the same id.
+@export var wear_slot := &""
+@export var wear_layer := 0
 
 @export_group("Rules")
 @export var droppable := true

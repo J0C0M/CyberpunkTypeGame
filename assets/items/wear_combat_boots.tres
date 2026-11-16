@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Script" path="res://scripts/items/item_data.gd" id="1_item"]
+
+[resource]
+script = ExtResource("1_item")
+id = &"wear_combat_boots"
+display_name = "Combat Boots"
+category = &"clothing"
+price = 75
+pack = 1
+stack_size = 1
+description = "Tall black boots with buckles."
+inspect_text = "Ex-army surplus, re-soled twice. The buckles are mostly decoration now."
+model = &"clothes"
+tint = Color(0.04, 0.04, 0.04, 1)
+wear_slot = &"shoes"
+wear_layer = 1
+droppable = false
+sellable = false

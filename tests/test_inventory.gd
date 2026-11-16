@@ -35,6 +35,8 @@ func _ready() -> void:
 	var screen := get_tree().get_first_node_in_group("inventory_screen")
 	screen.open()
 	_check(screen.is_open() and get_tree().paused and GameState.ui_mode == &"inventory", "inventory opens, pauses and owns input")
+	var doll: CharacterModel = screen.get("_doll")
+	_check(doll != null and doll.data == GameState.character and doll.worn == Outfits.items(GameState.character.outfit), "the paper doll shows the character in their outfit")
 	screen.open()
 	_check(GameState.ui_mode == &"inventory", "opening twice does nothing")
 	screen.set("_selected", &"synth_soda")

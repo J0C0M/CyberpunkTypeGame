@@ -17,7 +17,8 @@ robot dragons fly between the towers.
 
    Or open `project.godot` in the Godot editor and press **F5**.
 
-The renderer is Forward+ (Vulkan). You spawn inside a sushi cafe; walk out onto the street.
+The renderer is Forward+ (Vulkan). The game starts on the title screen: New Game opens the character
+creator, Continue loads your most recent save.
 
 ## Controls
 
@@ -31,8 +32,10 @@ The renderer is Forward+ (Vulkan). You spawn inside a sushi cafe; walk out onto 
 | Switch weapon | 1 / 2 / 3 or the mouse wheel |
 | Inventory (use, drop, inspect, hotbar) | Tab or I |
 | Quick heal (best healing item: med patch first) | H |
+| Controller | Left stick move, right stick look, RT fire, A jump, X reload, Y interact, B heal, LB/RB weapons, Back inventory, Start pause |
 | Interact (talk, trade, doors, elevator, bed, couch, pick up) | E |
-| Pause menu (volumes, mouse sensitivity, quit), leave menus | Esc (clicking the game captures the mouse) |
+| Pause menu (save, settings, back to the title screen, quit), leave menus | Esc (clicking the game captures the mouse) |
+| Character creator | drag or Q/E turn, wheel zoom, F face, B body, U underwear preview, LB/RB tabs |
 | Change TV channel (while seated) | A / D |
 | Dialogue choices | 1-8 or click |
 | Toggle PS1 vertex wobble | F2 |
@@ -41,8 +44,12 @@ The renderer is Forward+ (Vulkan). You spawn inside a sushi cafe; walk out onto 
 You start in the noodle bar. Talk to **Ren** behind the counter: Ren gives you some starting money,
 the key card to your apartment and a noodle coupon, explains the block and can mark shops and your
 apartment on the HUD. Ammo is no longer free; buy it by the box at Iron Lotus Arms (which also sells
-a pistol and a shotgun). The game saves when you sleep in your bed and when you quit, and picks up
-where you left off on the next start (pause menu: NEW GAME starts over).
+a pistol and a shotgun). The game autosaves when you sleep in your bed, go back to the title screen
+or quit; Save Game in the pause menu adds a slot. Every character has its own save slots.
+
+Keys can be rebound in Settings > Controls (keyboard, mouse or controller). Settings also has the
+resolution, window mode, retro-filter strength, VSync, an FPS cap, volumes, invert Y, field of view and
+head bob; the same menu opens from the title screen and the pause menu.
 
 ## What's in the game
 
@@ -50,6 +57,23 @@ where you left off on the next start (pause menu: NEW GAME starts over).
 - First-person controller with sprint, jump and head bob; retro low-res filter; an always-night
   neon city block with wet streets, skyline, flying-car traffic and robot dragons; wandering NPCs;
   the KS-47 hitscan rifle; HUD.
+
+### Prototype 5
+- **Title screen:** a live, rainy shot of the city through the retro filter, with its own music:
+  Continue, New Game, Load Game (characters with portraits; each slot shows the place, date, playtime and
+  in-game time; load or delete), Settings, Credits, Quit. Menus work with mouse, keyboard and controller.
+- **Character creator** in a neon body-shop clinic with a turntable: name, skin, head shape, eyes, brows,
+  nose, mouth, facial hair, face cyberware, hair style and colour (neon colours glow), muscularity, build,
+  height, up to eight tattoos (invented designs, ten zones, nine inks, optional glowing neon ink) and five
+  starting outfits. Every character wears white underpants with hearts under everything (toggle the
+  preview with U).
+- **The player model** is a rigged low-poly character (18-bone skeleton, one skinned part per body region,
+  muscle as a blend shape, attachment slots and wear layers for clothing and armour).
+- **Seeing yourself:** your own arms and hands hold every gun (skin, tattoos, glowing ink, sleeves and
+  gloves); look down to see your body and legs; the nearest lights cast your shadow; a turnable paper doll
+  in the inventory; working mirrors in the new bathroom of 1107, at Lucky Pawn and at Cyberware.
+- **Saves** are per character and slot (version 2); the prototype 4 save is converted into a character
+  called "Tenant" on first start.
 
 ### Prototype 4
 - **Inventory:** every item is a resource file (`assets/items/*.tres`, `ItemData`) with a generated
@@ -97,7 +121,9 @@ where you left off on the next start (pause menu: NEW GAME starts over).
 ```
 project.godot          Input map, physics layers, autoloads (EventBus, GameState), shader globals
 scenes/
-  main.tscn            Root: low-res RetroScreen viewport with the world, HUD, trade and dialogue screens
+  main_menu.tscn       Title screen (main scene); ui/menu_backdrop.tscn is its live city backdrop
+  character_creator.tscn  The character creator (body shop)
+  main.tscn            The game: low-res RetroScreen viewport with the world, HUD, trade and dialogue screens
   world/world.tscn     Environment, city, skyline, dragons, crowd, player, effect pools, ambience
   world/*.tscn         City, skyline, sushi cafe and the Neo-Heights apartment block
   shops/*.tscn         The six shops (ShopInterior + a Merchant)
@@ -112,6 +138,9 @@ scripts/
   interaction/         Interactable, Door
   items/               ItemData, ItemDB, Inventory, ShopProfile, ShopCatalog, ItemModels, ItemIcons,
                        Pickup, ItemScatter
+  character/           CharacterData, CharacterOptions, CharacterRig, CharacterModel, CharacterTexture,
+                       CharacterAtlas, CharacterMeshBuilder, TattooDesigns, Wearables, Outfits,
+                       CharacterPortrait, ViewArms
   dialogue/            GuideDialogue (Ren's dialogue tree)
   world/               CityBuilder, Skyline, SushiCafe, ShopInterior, ApartmentBlock, FlightPath, ...
   props/               TvSet
@@ -171,9 +200,10 @@ after adding scripts with a new `class_name`:
 godot --headless --path . res://tests/test_inventory.tscn
 ```
 
-The tests are `test_inventory`, `test_save`, `test_health`, `test_weapons`, `test_gang`,
-`test_police`, `test_world` (walking through doors and the elevator) and `test_crowd` (how often
-pedestrians get stuck). The `shot_*.tscn` scenes render screenshots instead (run them windowed with
+The tests are `test_inventory`, `test_save` (slots, characters, converting old saves),
+`test_health`, `test_weapons`, `test_gang`, `test_police`, `test_world` (doors, elevator, first-person
+body, mirrors), `test_crowd` (how often pedestrians get stuck), `test_character` (the player model) and
+`test_flow` (title screen -> creator -> game -> title screen -> continue). The `shot_*.tscn` scenes render screenshots instead (run them windowed with
 `-- --out=/tmp/prefix`), `perf_bench.tscn` prints frame times for an explosion and a firefight, and
 `test_quit.tscn` checks for a clean exit. Tests and screenshot runs never read or write your save.
 
@@ -190,6 +220,7 @@ Add `--only=lobby,hallway` to shoot just those views. Bugs found with it are in 
 ## Known limitations
 
 - The dragons are ambient only. Enemies are limited to one gang corner and the police drones.
+- Clothing can't be changed after the creator yet (prototype 6), and there is no third-person view yet.
 - Sounds are simple synthesised placeholders.
 - Text on signs uses Godot's default font plus your system fonts for Japanese characters. If no
   CJK font is installed, those signs show empty boxes.

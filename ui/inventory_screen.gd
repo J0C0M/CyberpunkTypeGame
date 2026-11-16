@@ -1,5 +1,6 @@
 extends CanvasLayer
-## Inventory (Tab or I): a grid of stacked items with category tabs, a detail panel (icon, name,
+## Inventory (Tab or I): a paper doll of the character (a 3D preview, drag to turn it; prototype 6
+## will dress it), a grid of stacked items with category tabs, a detail panel (icon, name,
 ## description, value, stack count) and actions: use (eat, drink, apply...), drop, inspect (a
 ## rotating 3D view) and putting weapons on the hotbar. The game pauses and the mouse is freed
 ## while it is open; Tab, I or Esc close it. Also owns the ItemIcons renderer.
@@ -16,6 +17,7 @@ const TABS := [
 	["AMMO", [&"ammo"]],
 	["FOOD & DRINK", [&"food", &"drink"]],
 	["MEDICAL", [&"medical"]],
+	["CLOTHING", [&"clothing"]],
 	["JUNK", [&"junk"]],
 	["VALUABLES", [&"valuable", &"cyberware"]],
 	["KEY ITEMS", [&"key"]],
@@ -40,6 +42,13 @@ var _inspect_button: Button
 var _hotbar_row: HBoxContainer
 var _hotbar_buttons: Array[Button] = []
 var _audio: AudioStreamPlayer
+
+## The paper doll: a character model on a little neon stage, turned by dragging.
+var _doll: CharacterModel
+var _doll_turntable: Node3D
+var _doll_worn: Label
+var _doll_drag := false
+var _doll_time := 0.0
 
 var _tab := 0
 ## The selected stack: its item and its index among that item's stacks.
@@ -74,6 +83,7 @@ func open() -> void:
 	_panel.visible = true
 	_backdrop.visible = true
 	_set_inspecting(false)
+	_refresh_doll()
 	_refresh()
 
 
@@ -103,6 +113,35 @@ func _unhandled_input(event: InputEvent) -> void:
 func _process(delta: float) -> void:
 	if _inspecting and _inspect_pivot:
 		_inspect_pivot.rotation.y += delta * 0.9
+	if is_open() and _doll:
+		_doll_time += delta
+		_doll.pose(0.0, 0.0, 0.0, 0.0, 0.0, _doll_time)
+
+
+## Dresses the doll as the character is now (look, outfit, the gun in hand).
+func _refresh_doll() -> void:
+	if _doll.data != GameState.character:
+		_doll.data = GameState.character
+	var mount := _doll.slot(&"hand_r")
+	for child in mount.get_children():
+		child.queue_free()
+	var holder := _holder()
+	if holder and holder.current:
+		var gun := ItemModels.build(holder.current.item_id)
+		gun.transform = Transform3D(Basis(Vector3(0, -1, 0), Vector3(0, 0, -1), Vector3(1, 0, 0)), Vector3(0, -0.02, 0))
+		mount.add_child(gun)
+	var names: Array[String] = []
+	for id in _doll.worn:
+		names.append(ItemDB.display_name(id))
+	_doll_worn.text = "%s\nWORN: %s\n+ white underpants with hearts" % [GameState.character.character_name.to_upper(), ", ".join(names) if not names.is_empty() else "nothing"]
+
+
+func _on_doll_input(event: InputEvent) -> void:
+	var button := event as InputEventMouseButton
+	if button and button.button_index == MOUSE_BUTTON_LEFT:
+		_doll_drag = button.pressed
+	elif event is InputEventMouseMotion and _doll_drag:
+		_doll_turntable.rotation.y += (event as InputEventMouseMotion).relative.x * 0.012
 
 
 func _on_inventory_changed() -> void:
@@ -185,12 +224,12 @@ func _update_detail() -> void:
 	_meta.text = "\n".join(lines)
 	_description.text = data.inspect_text if _inspecting else data.description
 	_use_button.visible = data.is_usable()
-	_use_button.text = data.use_verb.to_upper() + "  [DOUBLE-CLICK]"
+	_use_button.text = data.use_verb.to_upper()
 	var drop_amount := _drop_amount(id)
 	_drop_button.visible = data.droppable
 	_drop_button.text = "DROP %d" % drop_amount if drop_amount > 1 else "DROP"
 	_drop_stack_button.visible = data.droppable and _stack_count() > drop_amount
-	_drop_stack_button.text = "DROP STACK (%d)" % _stack_count()
+	_drop_stack_button.text = "DROP ALL %d" % _stack_count()
 	_inspect_button.visible = true
 	_inspect_button.text = "BACK" if _inspecting else "INSPECT"
 	_hotbar_row.visible = data.weapon_scene != null
@@ -337,9 +376,9 @@ func _build() -> void:
 	_panel.add_theme_stylebox_override("panel", UiStyle.panel(accent))
 	add_child(_panel)
 	_panel.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
-	_panel.offset_left = -560
+	_panel.offset_left = -625
 	_panel.offset_top = -320
-	_panel.offset_right = 560
+	_panel.offset_right = 625
 	_panel.offset_bottom = 320
 	var column := VBoxContainer.new()
 	column.add_theme_constant_override("separation", 10)
@@ -364,6 +403,7 @@ func _build() -> void:
 	body.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	body.add_theme_constant_override("separation", 18)
 	column.add_child(body)
+	body.add_child(_build_doll())
 
 	_grid = GridContainer.new()
 	_grid.columns = COLUMNS
@@ -445,6 +485,69 @@ func _action_button(parent: Control, color: Color, action: Callable) -> Button:
 	button.pressed.connect(action)
 	parent.add_child(button)
 	return button
+
+
+## The paper doll: the character on a small neon-lit stage in its own world, drawn at half
+## resolution like the game. Drag it to turn it.
+func _build_doll() -> Control:
+	var column := VBoxContainer.new()
+	column.custom_minimum_size = Vector2(210, 0)
+	column.add_theme_constant_override("separation", 6)
+	var container := SubViewportContainer.new()
+	container.stretch = true
+	container.stretch_shrink = 2
+	container.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	container.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	container.mouse_filter = Control.MOUSE_FILTER_STOP
+	container.gui_input.connect(_on_doll_input)
+	container.tooltip_text = "Drag to turn"
+	column.add_child(container)
+	var viewport := SubViewport.new()
+	viewport.own_world_3d = true
+	viewport.transparent_bg = true
+	container.add_child(viewport)
+	var env := Environment.new()
+	env.background_mode = Environment.BG_CLEAR_COLOR
+	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
+	env.ambient_light_color = Color(0.45, 0.4, 0.6)
+	env.ambient_light_energy = 0.6
+	env.tonemap_mode = Environment.TONE_MAPPER_FILMIC
+	env.glow_enabled = true
+	env.glow_intensity = 0.5
+	env.glow_hdr_threshold = 1.1
+	var world_env := WorldEnvironment.new()
+	world_env.environment = env
+	viewport.add_child(world_env)
+	var key := DirectionalLight3D.new()
+	key.rotation = Vector3(deg_to_rad(-30.0), deg_to_rad(25.0), 0.0)
+	key.light_energy = 1.0
+	viewport.add_child(key)
+	for side: float in [-1.0, 1.0]:
+		var rim := OmniLight3D.new()
+		rim.position = Vector3(side * 1.1, 1.6, -0.8)
+		rim.light_color = Palette.PINK if side < 0.0 else Palette.CYAN
+		rim.light_energy = 1.6
+		rim.omni_range = 4.0
+		viewport.add_child(rim)
+	var stage := GeoBatch.new()
+	stage.add_cylinder(0.55, 0.6, 0.06, 16, Transform3D(Basis.IDENTITY, Vector3(0, -0.03, 0)), MatLib.surface(Color(0.12, 0.12, 0.16), 0.4, 0.5))
+	stage.add_cylinder(0.61, 0.61, 0.015, 16, Transform3D(Basis.IDENTITY, Vector3(0, -0.005, 0)), MatLib.neon(Palette.PURPLE, 2.5), false)
+	stage.build_into(viewport, "Stage", false)
+	_doll_turntable = Node3D.new()
+	_doll_turntable.rotation.y = PI + 0.3
+	viewport.add_child(_doll_turntable)
+	_doll = CharacterModel.new()
+	_doll.data = GameState.character
+	_doll_turntable.add_child(_doll)
+	var camera := Camera3D.new()
+	camera.fov = 34.0
+	viewport.add_child(camera)
+	var eye := Vector3(0, 1.0, 3.9)
+	camera.transform = Transform3D(Basis.looking_at(Vector3(0, 0.92, 0) - eye, Vector3.UP), eye)
+	_doll_worn = UiStyle.label("", 12, Color(0.8, 0.85, 1.0), Color.BLACK)
+	_doll_worn.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	column.add_child(_doll_worn)
+	return column
 
 
 ## A little 3D stage for inspecting an item: the model turns slowly under two lights.

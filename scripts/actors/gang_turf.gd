@@ -27,6 +27,7 @@ var _time := 0.0
 func _ready() -> void:
 	add_to_group("night_cleanup")
 	add_to_group("gang_turf")
+	GameState.register_area("Rust Jackal corner", global_transform, Vector3(radius * 2.0, 8.0, radius * 1.3))
 	_build_hangout()
 	var region := get_node_or_null(nav) as EnemyNav
 	if region and not region.is_baked:

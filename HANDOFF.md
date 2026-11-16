@@ -1,16 +1,17 @@
 # Handoff: context for the next Claude Code session
 
 Read this file, `PROGRESS.md`, `README.md`, `git log --oneline -40` and `git status` before doing anything.
-This file explains how the project is built and the rules for working in it. Prototype 4 (inventory +
-save system, combat, bug hunt) is done; section 5 keeps its brief for reference and section 6 has a
-proposal for prototype 5 that still needs the user's go-ahead.
+This file explains how the project is built and the rules for working in it. Prototypes 1-5 are done
+(prototype 5: title screen, character creator, player model, save slots, first-person body, mirrors).
+Section 5 keeps the prototype 4 brief for reference; section 6 lists what is planned next.
 
 ## 1. Project at a glance
 - Godot **4.7.2**, GDScript, Forward+ renderer. The binary is **not on PATH**:
   `~/Downloads/Godot_v4.7.2-stable_linux.x86_64`. Machine: Linux (Wayland, DISPLAY=:0), RTX 4070 SUPER.
 - A low-poly, always-night neon city block ("Neo-Kabukicho // Block 7") seen through a 360p retro filter.
   Almost everything visual is **generated in code** by `@tool` builder scripts (no imported models).
-- Prototypes 1 to 4 are merged into `Development`. `main` holds only the initial commit.
+- Prototypes 1 to 5 are merged into `Development`. `main` holds only the initial commit.
+- The game starts on `scenes/main_menu.tscn`; `scenes/main.tscn` is the city (tests run it directly).
 
 ## 2. Git rules (follow exactly)
 1. Commit after every meaningful step; small commits, clear English messages.
@@ -21,7 +22,7 @@ proposal for prototype 5 that still needs the user's go-ahead.
 3. Never change the git identity, never turn off commit signing.
 4. Never add "Co-Authored-By: Claude" or any mention of Claude/Anthropic to commits or PRs.
 5. Branches: create one branch from `Development` per request, English words with hyphens, every word
-   capitalised (next one: `Build-Fifth-Prototype`). When finished and tested, merge it into `Development`
+   capitalised (next one: `Build-Sixth-Prototype`). When finished and tested, merge it into `Development`
    with `--no-ff` and push. **Never commit, push or merge to `main`.**
 6. Push to `origin` (git@github.com:J0C0M/CyberpunkTypeGame.git).
 7. Keep `PROGRESS.md` updated with every commit (done / in progress / left), so a new chat can resume.
@@ -37,6 +38,8 @@ $G --path . -- --shots=/tmp/s --views="x,y,z,yaw,pitch;..." --frames=40 [--fire-
 - Tests live in `tests/` (`test_*.tscn` headless, `shot_*.tscn` windowed screenshots, `perf_bench.tscn`);
   run every `test_*.tscn` before merging. After adding a script with a new `class_name`, run `--import`
   once or the tests can't see the class. Whole-block screenshot tour: `$G --path . -- --tour=/tmp/tour`.
+- Tests and tours must never touch the player's saves: `SaveGame.root_dir` / `legacy_path` point at
+  test folders in the tests that save; screenshot mode turns saving off.
 - `--script` mode does **not** load autoloads. For scripted tests, wrap a `extends Node` test script in a tiny
   `.tscn` and run that scene (`$G --headless --path . /path/to/test_runner.tscn`); for screenshots run it
   without `--headless`. Set `get_tree().set_meta("screenshot_mode", true)` to hide the "click to play" overlay.
@@ -52,7 +55,9 @@ $G --path . -- --shots=/tmp/s --views="x,y,z,yaw,pitch;..." --frames=40 [--fire-
   (ui_mode, credits, `inventory: Inventory` (30 slots), reputation, places/waypoints, flags, clock,
   `pass_night()`, timed `effects`, `use_item()`, `wanted`), `Settings` (bus volumes, mouse sensitivity,
   user://settings.cfg), `Music` (street music, MusicZones, ducking, muffle), `SaveGame` (user://savegame.json,
-  "saveable" group, `quit_game()` saves and exits cleanly).
+  "saveable" group, `quit_game()` saves and exits cleanly; version 2: `user://saves/<character>/<slot>.json`,
+  scene flow menu <-> creator <-> game via `start_new_character`, `load_slot`, `return_to_menu`).
+  GameState also holds `character` (CharacterData), `play_seconds`, `portrait_png`, `register_area()`.
 - **Input ownership:** `GameState.claim_ui(mode, free_mouse)` / `release_ui()`. While `ui_mode != ""` the player
   can't move or interact and Main ignores Esc. Modes in use: trade, dialogue, paused, seated, sleeping, elevator.
 - **Damage:** `scripts/combat/` — `HitInfo`, `Damageable` (`register(collider, target, zone, multiplier)`,
@@ -69,6 +74,11 @@ $G --path . -- --shots=/tmp/s --views="x,y,z,yaw,pitch;..." --frames=40 [--fire-
 - **Items/economy:** one `ItemData` resource per item in `assets/items/`, loaded by `ItemDB` (static helpers);
   `ShopProfile` resources in `assets/shops/` loaded by `ShopCatalog`; `ItemModels` (low-poly item models),
   `ItemIcons` (renders icons once), `Pickup`, `ItemScatter`. UI: `ui/inventory_screen.gd`, `ui/item_slot.gd`.
+- **Player character:** `scripts/character/` (see PROGRESS.md, prototype 5 and "Prototype 6
+  preparation"): `CharacterModel` (rigged body built from `CharacterData`), `ViewArms` (first-person arms
+  on the gun models' hand markers), `Mirror`, `ShadowLights`, creator `ui/character_creator.gd` +
+  `scripts/world/body_shop.gd`, title screen `ui/main_menu.gd`, shared `ui/settings_menu.gd`.
+  Render layer 3 (bit 4) = parts the first-person camera skips (head, neck, hair, arms, gun in hand).
 - **Enemies:** `GangMember` (Person subclass) + `GangTurf` (Rust Jackals, west end of the main street) on the
   `EnemyNav` navmesh (layer 2, baked from colliders); `PoliceDispatch` (heat/wanted stars) + `PoliceDrone`.
   Cover = "cover" group (`Car`, `BreakableProp` >= 0.8 m, `CoverBlock`) with `cover_outline()`.
@@ -156,16 +166,10 @@ Merge `Build-Fourth-Prototype` into `Development`, push, and give the user a sho
 controls, bugs fixed, known remaining problems, and a proposal for the next prototype (story, new levels and
 other atmospheres). **Done:** see PROGRESS.md and BUGFIX_NOTES.md.
 
-## 6. Proposal for prototype 5 (not agreed with the user yet; ask before starting)
-- **Story, act 1, "Rent Paid":** who paid the rent on 1107? A short quest line through Ren, the terminal in
-  the apartment and Doc Ichi's data shards: a data shard with a message for "the tenant of 1107", a
-  courier job for Kaz, and a deal with (or against) the Rust Jackals. Needs a small quest system (quest log
-  in the inventory screen, objectives on the HUD waypoint, flags in GameState) and a few new dialogue trees.
-- **A second level with its own atmosphere:** the "Undercity" below Block 7: a flooded maintenance tunnel and
-  night market under the overpass (green and amber light, steam, dripping water, a different music track),
-  reached through a service door by the Jackals' barricade or the Neo-Heights basement. Loaded as its own
-  scene with a transition, which needs the save system to remember which level the player is in.
-- **Rooftops:** the Neo-Heights roof via the elevator (a third stop): wind, rain, the dragons up close, a
-  sniper-perch encounter with police drones.
-- **Smaller follow-ups:** the gang reacting to the player's reputation (a truce after the courier job), a
-  bounty board at the Koi Bar, weather (rain on/off per night), and controller support.
+## 6. Next up
+- **Prototype 6 (agreed direction): Morrowind-style clothing and armour.** The model is prepared for it;
+  read "Prototype 6 preparation" in PROGRESS.md first.
+- **Moved out of prototype 5 at the user's request (do later):** a photo booth (pixel photo as the save
+  portrait and an item), third-person / photo mode (V), a security monitor in the Neo-Heights lobby, and
+  NPCs (Ren, merchants) commenting on the character's look.
+- Older ideas, not agreed: story act 1 "Rent Paid", the Undercity level, the Neo-Heights roof.

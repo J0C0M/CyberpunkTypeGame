@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Script" path="res://scripts/items/item_data.gd" id="1_item"]
+
+[resource]
+script = ExtResource("1_item")
+id = &"wear_oxfords"
+display_name = "Oxford Shoes"
+category = &"clothing"
+price = 80
+pack = 1
+stack_size = 1
+description = "Black leather-look oxfords."
+inspect_text = "Synthetic leather, polished to a shine that reflects the neon. Slippery on wet streets."
+model = &"clothes"
+tint = Color(0.05, 0.04, 0.04, 1)
+wear_slot = &"shoes"
+wear_layer = 1
+droppable = false
+sellable = false

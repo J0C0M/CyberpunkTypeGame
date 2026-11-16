@@ -4,11 +4,14 @@ extends Node
 ## trading and TV, and muffles it (low-pass) for a moment after nearby gunfire or explosions.
 
 const STREET := preload("res://assets/music/street.ogg")
+const MENU := preload("res://assets/music/menu.ogg")
 const STREET_DB := -9.0
 ## Extra Music-bus attenuation per UI mode.
 const DUCK := {&"dialogue": -9.0, &"trade": -6.0, &"inventory": -6.0, &"seated": -40.0, &"paused": -10.0}
 
 var _street: AudioStreamPlayer
+## True on the title screen and in the creator: the menu theme plays instead of the street.
+var _menu := false
 var _zones: Array[MusicZone] = []
 var _duck := 0.0
 var _muffle := 0.0
@@ -29,6 +32,17 @@ func _ready() -> void:
 	EventBus.danger.connect(_on_danger)
 
 
+## Switches between the menu theme (title screen, creator) and the street soundtrack.
+func play_menu(on: bool) -> void:
+	if on == _menu:
+		return
+	_menu = on
+	_zones.clear()
+	_street.stream = MENU if on else STREET
+	_street.volume_db = STREET_DB
+	_street.play()
+
+
 func enter_zone(zone: MusicZone) -> void:
 	_zones.erase(zone)
 	_zones.append(zone)
@@ -46,7 +60,7 @@ func current_zone() -> MusicZone:
 
 
 func _process(delta: float) -> void:
-	var zone := current_zone()
+	var zone := current_zone() if not _menu else null
 	_street.volume_db = move_toward(_street.volume_db, -60.0 if zone else STREET_DB, delta * (30.0 if zone else 15.0))
 	for node in get_tree().get_nodes_in_group("music_zones"):
 		(node as MusicZone).set_inside(node == zone)

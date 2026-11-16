@@ -48,6 +48,10 @@ func _process(_delta: float) -> void:
 	for i in SLOT_COUNT:
 		if Input.is_action_just_pressed("weapon_%d" % (i + 1)):
 			select_slot(i)
+	if Input.is_action_just_pressed("weapon_next"):
+		cycle(1)
+	elif Input.is_action_just_pressed("weapon_prev"):
+		cycle(-1)
 
 
 ## Next/previous owned weapon (mouse wheel).
