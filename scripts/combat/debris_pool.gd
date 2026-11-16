@@ -25,6 +25,7 @@ static func get_pool(node: Node) -> DebrisPool:
 
 func _ready() -> void:
 	add_to_group("debris_pool")
+	add_to_group("night_cleanup")
 	var chunk := GeoBatch.new()
 	chunk.add_box_at(Vector3.ONE, Vector3.ZERO, MatLib.surface(Color.WHITE))
 	var shard := GeoBatch.new()
@@ -51,6 +52,13 @@ func _ready() -> void:
 		_size.append(Vector3.ONE)
 	_age.resize(pool_size)
 	_age.fill(-1.0)
+
+
+func clear_for_new_night() -> void:
+	for i in pool_size:
+		_age[i] = -1.0
+		_pieces[i].process_mode = Node.PROCESS_MODE_DISABLED
+		_pieces[i].visible = false
 
 
 ## Throws one piece. `size` is its extent in metres (for shards, y is the thickness).

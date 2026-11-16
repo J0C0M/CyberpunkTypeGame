@@ -394,6 +394,81 @@ def elevator_hum(rng):
     return normalize(crossfade_loop(mix(hum, air), 0.5), 0.4)
 
 
+def note(freq, length, rng, wave="saw", decay=0.25, amp=0.3):
+    n = seconds(length)
+    out = []
+    phase = 0.0
+    for i in range(n):
+        t = i / SAMPLE_RATE
+        phase = (phase + freq / SAMPLE_RATE) % 1.0
+        if wave == "saw":
+            v = 2.0 * phase - 1.0
+        elif wave == "square":
+            v = 1.0 if phase < 0.5 else -1.0
+        else:
+            v = math.sin(2 * math.pi * phase)
+        out.append(v * amp * (1 - math.exp(-t / 0.005)) * math.exp(-t / decay))
+    return out
+
+
+def midi(n):
+    return 440.0 * 2 ** ((n - 69) / 12.0)
+
+
+def sequence(rng, length, step, notes, wave, decay, amp, cutoff):
+    """Places `notes` (MIDI numbers or None for rests) one per `step` seconds, looping to fill `length`."""
+    tracks = []
+    t, i = 0.0, 0
+    while t < length - 0.01:
+        n = notes[i % len(notes)]
+        if n is not None:
+            tracks.append(place(note(midi(n), step * 1.8, rng, wave, decay, amp), t, length))
+        t += step
+        i += 1
+    return lowpass(mix(*tracks), cutoff) if tracks else [0.0] * seconds(length)
+
+
+def tv_news(rng):
+    length = 6.4
+    jingle = sequence(rng, length, 0.2, [72, 76, 79, 84, None, 79, 84, None] + [None] * 24, "square", 0.15, 0.25, 3000)
+    # Babble: a voice-like buzz with wandering formants, so it sounds like someone talking.
+    n = seconds(length)
+    babble = []
+    for i in range(n):
+        t = i / SAMPLE_RATE
+        syllable = 0.5 + 0.5 * math.sin(2 * math.pi * 4.3 * t + math.sin(t * 1.7) * 2.0)
+        pitch = 130 + 25 * math.sin(t * 2.1)
+        babble.append(((t * pitch) % 1.0 - 0.5) * syllable * (0.0 if 1.6 < t % 3.2 < 1.9 else 0.5))
+    babble = bandpass(babble, 300, 1800)
+    return normalize(crossfade_loop(mix(jingle, babble), 0.4), 0.5)
+
+
+def tv_advert(rng):
+    length = 4.8
+    arp = sequence(rng, length, 0.15, [60, 64, 67, 72, 67, 64] * 2 + [62, 65, 69, 74, 69, 65] * 2 + [None] * 8, "saw", 0.12, 0.2, 2500)
+    bass = sequence(rng, length, 0.6, [36, 36, 38, 38, 36, 36, 41, 43], "sine", 0.4, 0.35, 600)
+    return normalize(crossfade_loop(mix(arp, bass), 0.3), 0.5)
+
+
+def tv_anime(rng):
+    length = 4.0
+    lead = sequence(rng, length, 0.125, [69, 72, 76, 81, 79, 76, 72, 76] * 4, "saw", 0.08, 0.2, 3500)
+    bass = sequence(rng, length, 0.25, [45, 45, 45, 48, 43, 43, 41, 40] * 2, "square", 0.15, 0.25, 900)
+    kick = [0.0] * seconds(length)
+    for k in range(int(length / 0.25)):
+        start = seconds(k * 0.25)
+        for i in range(seconds(0.12)):
+            if start + i < len(kick):
+                t = i / SAMPLE_RATE
+                kick[start + i] += math.sin(2 * math.pi * (50 + 120 * math.exp(-t * 40)) * t) * math.exp(-t / 0.05) * 0.5
+    return normalize(crossfade_loop(mix(lead, bass, kick), 0.25), 0.5)
+
+
+def tv_static(rng):
+    n = seconds(3.0)
+    return normalize(crossfade_loop(bandpass(noise(n, rng), 400, 6000), 0.3), 0.35)
+
+
 def main():
     sounds = [
         ("rifle_shot.wav", rifle_shot),
@@ -421,6 +496,10 @@ def main():
         ("door_slide.wav", door_slide),
         ("elevator_ding.wav", elevator_ding),
         ("elevator_hum.wav", elevator_hum),
+        ("tv/news.wav", tv_news),
+        ("tv/advert.wav", tv_advert),
+        ("tv/anime.wav", tv_anime),
+        ("tv/static.wav", tv_static),
         ("footsteps/land_1.wav", landing),
         ("footsteps/land_2.wav", landing),
     ]

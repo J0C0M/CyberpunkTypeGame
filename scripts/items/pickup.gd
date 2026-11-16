@@ -37,6 +37,7 @@ static func drop_loot(parent: Node, position: Vector3) -> void:
 
 
 func _ready() -> void:
+	add_to_group("night_cleanup")
 	var color := Palette.AMBER if item_id == &"" else ItemDB.color(item_id)
 	_visual = Node3D.new()
 	add_child(_visual)
@@ -61,6 +62,11 @@ func _process(delta: float) -> void:
 	_visual.position.y = 0.25 + sin(_age * 2.5) * 0.04
 	if _age > LIFETIME:
 		queue_free()
+
+
+## Loot doesn't last the night.
+func clear_for_new_night() -> void:
+	queue_free()
 
 
 func _prompt() -> String:

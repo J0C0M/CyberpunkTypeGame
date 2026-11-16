@@ -4,7 +4,9 @@ extends Node3D
 ## Neo-Heights, the residential tower where the player lives. The CityBuilder places it on a corner
 ## lot and leaves two floors hollow for it: the ground-floor lobby (mailboxes, a buzzing light, the
 ## doorman robot, the elevator) and the 11th floor (hallway, locked neighbours' doors, the player's
-## apartment 1107). The elevator runs between them: walk in, use the panel, ride up.
+## apartment 1107). The elevator runs between them: walk in, use the panel, ride up. The apartment
+## has a bed (sleep: skip ahead and reset the city for a new night), a couch facing a TV with four
+## channels, a kitchenette with a fridge and a window over both street canyons.
 ## Local space: the street front is z = 0 facing +Z; the east side (x = +width/2) faces the cross street.
 
 const FLOOR_Y := 0.15
@@ -40,6 +42,12 @@ var _door_open := {0: 0.0, 1: 0.0}
 var _riding := false
 var _hum: AudioStreamPlayer3D
 var _buzz_light: OmniLight3D
+var _tv: TvSet
+## The player while they sit on the couch (null otherwise).
+var _seated: Player
+var _seat_return := Transform3D.IDENTITY
+var _seat_lock := 0.0
+var _fridge_stocked := true
 
 
 func _ready() -> void:
@@ -54,9 +62,11 @@ func _ready() -> void:
 		_build_cab(level)
 	_build_upper_shell()
 	_build_hallway()
+	_build_apartment()
 	_geo.build_into(_root, "BlockGeometry")
 	if not Engine.is_editor_hint():
 		GameState.register_place(&"apartment", "Neo-Heights 1107", global_transform * Vector3(0, 0, 2.0))
+		GameState.night_passed.connect(func() -> void: _fridge_stocked = true)
 
 
 func _half() -> float:
@@ -81,6 +91,14 @@ func _process(delta: float) -> void:
 		(doors[2] as CollisionShape3D).disabled = _door_open[level] > 0.6
 	if _buzz_light and randf() < 0.06:
 		_buzz_light.light_energy = randf_range(0.2, 1.6)
+	if _seated:
+		_seat_lock -= delta
+		if Input.is_action_just_pressed("move_left"):
+			_tv.next_channel(-1)
+		elif Input.is_action_just_pressed("move_right"):
+			_tv.next_channel(1)
+		elif _seat_lock <= 0.0 and (Input.is_action_just_pressed("interact") or Input.is_action_just_pressed("toggle_mouse_capture")):
+			_stand_up()
 
 
 # --- Lobby -------------------------------------------------------------------------------------
@@ -88,8 +106,8 @@ func _process(delta: float) -> void:
 func _build_lobby() -> void:
 	var half := _half()
 	var depth := -HALL_BACK_Z
-	var wall := MatLib.surface(Color(0.2, 0.18, 0.24), 0.7)
-	var tile := MatLib.surface(Color(0.16, 0.15, 0.18), 0.25, 0.1, 0.15)
+	var wall := MatLib.surface(Color(0.34, 0.3, 0.4), 0.7)
+	var tile := MatLib.surface(Color(0.26, 0.24, 0.28), 0.25, 0.1, 0.15)
 	_geo.add_box_at(Vector3(width, FLOOR_Y, depth), Vector3(0, FLOOR_Y * 0.5, -depth * 0.5), tile)
 	BuildKit.box_collider_at(_body, Vector3(width, 1.0, depth), Vector3(0, FLOOR_Y - 0.5, -depth * 0.5)).set_meta(&"surface", &"tile")
 	_geo.add_box_at(Vector3(width, 0.3, depth), Vector3(0, LOBBY_HEIGHT + 0.15, -depth * 0.5), MatLib.surface(Palette.METAL_DARK, 0.6))
@@ -124,7 +142,11 @@ func _build_lobby() -> void:
 	# The buzzing, flickering light that every lobby has.
 	_geo.add_box_at(Vector3(0.12, 0.06, 2.2), Vector3(-2.0, LOBBY_HEIGHT - 0.05, -4.5), MatLib.neon(Palette.COOL_WHITE, 4.0, 0.6, 0.0, 0.3))
 	_buzz_light = BuildKit.omni(_root, Vector3(-2.0, LOBBY_HEIGHT - 0.4, -4.5), Palette.COOL_WHITE, 1.0, 9.0)
-	BuildKit.omni(_root, Vector3(3.0, LOBBY_HEIGHT - 0.5, -3.0), ACCENT, 1.2, 8.0)
+	BuildKit.omni(_root, Vector3(3.0, LOBBY_HEIGHT - 0.5, -3.0), ACCENT, 1.4, 9.0)
+	BuildKit.omni(_root, Vector3(SHAFT_X, LOBBY_HEIGHT - 0.5, HALL_BACK_Z + 2.0), Palette.WARM_WHITE, 1.6, 8.0)
+	BuildKit.omni(_root, Vector3(half - 2.6, LOBBY_HEIGHT - 0.5, -4.0), Palette.WARM_WHITE, 1.2, 7.0)
+	for x: float in [-4.5, 0.0, 4.5]:
+		_geo.add_box_at(Vector3(1.6, 0.04, 0.3), Vector3(x, LOBBY_HEIGHT - 0.03, -1.5), MatLib.neon(Palette.WARM_WHITE, 2.5))
 	if not Engine.is_editor_hint():
 		var buzz := AudioStreamPlayer3D.new()
 		buzz.stream = BUZZ
@@ -388,3 +410,214 @@ func _build_hallway() -> void:
 	BuildKit.omni(_root, Vector3(-3.0, UPPER_Y + UPPER_HEIGHT - 0.4, hall_center_z), Palette.COOL_WHITE, 1.0, 8.0)
 	BuildKit.omni(_root, Vector3(4.0, UPPER_Y + UPPER_HEIGHT - 0.4, hall_center_z), ACCENT, 0.9, 7.0)
 	BuildKit.neon_text(_root, "NO SMOKING  //  NO DRONES", Transform3D(Basis(Vector3.UP, PI), Vector3(-2.8, UPPER_Y + 2.4, HALL_FRONT_Z - 0.01)), Palette.RED, 0.12)
+
+
+# --- Apartment 1107 ----------------------------------------------------------------------------
+
+func _build_apartment() -> void:
+	var half := _half()
+	var y := UPPER_Y
+	var lining := MatLib.surface(Color(0.3, 0.2, 0.28), 0.75)
+	# Inner lining over the outer walls (the outside uses the window facade) around both windows.
+	var sill := y + 0.75
+	var lintel := y + 2.85
+	var front := -0.31
+	for piece in [[Vector2(APARTMENT_X, APARTMENT_X + 0.6), Vector2(y, y + UPPER_HEIGHT)], [Vector2(half - 0.6, half - 0.3), Vector2(y, y + UPPER_HEIGHT)],
+			[Vector2(APARTMENT_X + 0.6, half - 0.6), Vector2(y, sill)], [Vector2(APARTMENT_X + 0.6, half - 0.6), Vector2(lintel, y + UPPER_HEIGHT)]]:
+		var span: Vector2 = piece[0]
+		var vertical: Vector2 = piece[1]
+		_geo.add_box_at(Vector3(span.y - span.x, vertical.y - vertical.x, 0.02), Vector3((span.x + span.y) * 0.5, (vertical.x + vertical.y) * 0.5, front), lining)
+	var east := half - 0.31
+	for piece in [[Vector2(HALL_FRONT_Z + 0.3, -7.2), Vector2(y, y + UPPER_HEIGHT)], [Vector2(-0.9, -0.3), Vector2(y, y + UPPER_HEIGHT)],
+			[Vector2(-7.2, -0.9), Vector2(y, sill)], [Vector2(-7.2, -0.9), Vector2(lintel, y + UPPER_HEIGHT)]]:
+		var span: Vector2 = piece[0]
+		var vertical: Vector2 = piece[1]
+		_geo.add_box_at(Vector3(0.02, vertical.y - vertical.x, span.y - span.x), Vector3(east, (vertical.x + vertical.y) * 0.5, (span.x + span.y) * 0.5), lining)
+	# Wood floor, rug and a neon strip under the street window.
+	var room_center := Vector3((APARTMENT_X + half - 0.3) * 0.5, y, (HALL_FRONT_Z + 0.3 - 0.3) * 0.5)
+	_geo.add_box_at(Vector3(half - 0.3 - APARTMENT_X, 0.02, -HALL_FRONT_Z - 0.6), room_center + Vector3.UP * 0.01, MatLib.surface(Color(0.24, 0.14, 0.1), 0.45))
+	_geo.add_box_at(Vector3(2.6, 0.012, 2.0), Vector3(4.4, y + 0.026, -4.6), MatLib.surface(Color(0.08, 0.2, 0.22), 0.9))
+	_geo.add_bar(Vector3(APARTMENT_X + 0.7, sill - 0.05, front + 0.03), Vector3(half - 0.7, sill - 0.05, front + 0.03), 0.04, MatLib.neon(ACCENT, 3.0))
+	_build_bed(y)
+	_build_lounge(y)
+	_build_kitchenette(y, half)
+	_build_desk(y)
+	_build_clutter(y, half)
+	BuildKit.omni(_root, Vector3(4.8, y + UPPER_HEIGHT - 0.4, -4.0), Palette.WARM_WHITE, 1.3, 7.0)
+	BuildKit.omni(_root, Vector3(half - 1.0, y + 1.2, -1.2), ACCENT, 0.7, 4.0)
+
+
+func _build_bed(y: float) -> void:
+	var frame := MatLib.surface(Color(0.12, 0.1, 0.12), 0.6, 0.3)
+	var bed := Vector3(2.55, y, -2.2)
+	_geo.add_box_at(Vector3(1.5, 0.35, 2.1), bed + Vector3.UP * 0.175, frame)
+	_geo.add_box_at(Vector3(1.42, 0.18, 2.02), bed + Vector3.UP * 0.44, MatLib.surface(Color(0.8, 0.78, 0.75), 0.9))
+	_geo.add_box(Vector3(1.46, 0.08, 1.3), Transform3D(Basis(Vector3.FORWARD, 0.03), bed + Vector3(0, 0.56, -0.35)), MatLib.surface(Color(0.3, 0.08, 0.35), 0.9))
+	_geo.add_box_at(Vector3(0.6, 0.12, 0.4), bed + Vector3(-0.3, 0.58, 0.75), MatLib.surface(Color(0.85, 0.85, 0.9), 0.9))
+	_geo.add_box_at(Vector3(0.6, 0.12, 0.4), bed + Vector3(0.35, 0.58, 0.72), MatLib.surface(Color(0.7, 0.75, 0.85), 0.9))
+	_geo.add_bar(bed + Vector3(-0.76, 0.08, -1.05), bed + Vector3(-0.76, 0.08, 1.05), 0.03, MatLib.neon(Palette.PINK, 2.0))
+	BuildKit.box_collider_at(_body, Vector3(1.5, 0.6, 2.1), bed + Vector3.UP * 0.3)
+	# Bedside table with a warm lamp.
+	var side_table := bed + Vector3(1.05, 0.0, 0.75)
+	_geo.add_box_at(Vector3(0.45, 0.5, 0.45), side_table + Vector3.UP * 0.25, frame)
+	_geo.add_cylinder(0.04, 0.04, 0.3, 6, Transform3D(Basis.IDENTITY, side_table + Vector3.UP * 0.65), MatLib.surface(Palette.METAL, 0.3, 0.8))
+	_geo.add_cylinder(0.16, 0.1, 0.18, 8, Transform3D(Basis.IDENTITY, side_table + Vector3.UP * 0.85), MatLib.neon(Palette.WARM_WHITE, 1.6))
+	BuildKit.omni(_root, side_table + Vector3.UP * 0.9, Palette.WARM_WHITE, 0.8, 3.5)
+	if not Engine.is_editor_hint():
+		var sleep := Interactable.create(_root, Vector3(1.6, 0.9, 2.2), bed + Vector3.UP * 0.75, "Sleep (skip 6 hours)")
+		sleep.interacted.connect(_sleep)
+
+
+func _build_lounge(y: float) -> void:
+	# TV on the west wall, couch facing it, a low table between them.
+	var stand := Vector3(APARTMENT_X + 0.3, y, -5.6)
+	_geo.add_box_at(Vector3(0.5, 0.45, 1.9), stand + Vector3.UP * 0.225, MatLib.surface(Color(0.06, 0.06, 0.08), 0.4, 0.3))
+	_geo.add_bar(stand + Vector3(0.26, 0.05, -0.85), stand + Vector3(0.26, 0.05, 0.85), 0.03, MatLib.neon(Palette.CYAN, 2.0))
+	BuildKit.box_collider_at(_body, Vector3(0.5, 0.45, 1.7), stand + Vector3.UP * 0.225)
+	if not Engine.is_editor_hint():
+		_tv = TvSet.new()
+		_tv.name = "TV"
+		_tv.screen_size = Vector2(1.7, 0.96)
+		_tv.position = Vector3(APARTMENT_X + 0.08, y + 1.3, -5.6)
+		_tv.rotation.y = PI * 0.5
+		_root.add_child(_tv)
+	var fabric := MatLib.surface(Color(0.45, 0.07, 0.12), 0.85)
+	var couch := Vector3(5.95, y, -5.6)
+	_geo.add_box_at(Vector3(0.9, 0.42, 1.8), couch + Vector3.UP * 0.21, fabric)
+	_geo.add_box_at(Vector3(0.25, 0.55, 1.8), couch + Vector3(0.36, 0.62, 0), fabric)
+	for side: float in [-1.0, 1.0]:
+		_geo.add_box_at(Vector3(0.9, 0.25, 0.18), couch + Vector3(0, 0.5, side * 0.88), fabric)
+	_geo.add_box(Vector3(0.12, 0.35, 0.4), Transform3D(Basis(Vector3.FORWARD, 0.4), couch + Vector3(0.15, 0.6, 0.45)), MatLib.surface(Palette.CYAN.darkened(0.5), 0.9))
+	BuildKit.box_collider_at(_body, Vector3(0.9, 0.9, 1.8), couch + Vector3.UP * 0.45)
+	var table := Vector3(4.1, y, -5.6)
+	_geo.add_box_at(Vector3(0.6, 0.06, 1.0), table + Vector3.UP * 0.38, MatLib.surface(Color(0.05, 0.05, 0.06), 0.6, 0.2))
+	for leg: Vector2 in [Vector2(-0.25, -0.45), Vector2(0.25, -0.45), Vector2(-0.25, 0.45), Vector2(0.25, 0.45)]:
+		_geo.add_bar(table + Vector3(leg.x, 0.0, leg.y), table + Vector3(leg.x, 0.36, leg.y), 0.03, MatLib.surface(Palette.METAL, 0.3, 0.8))
+	BuildKit.box_collider_at(_body, Vector3(0.6, 0.42, 1.0), table + Vector3.UP * 0.21)
+	for i in 3:
+		_geo.add_cylinder(0.06, 0.05, 0.12, 8, Transform3D(Basis.IDENTITY, table + Vector3(_rng.randf_range(-0.2, 0.2), 0.47, -0.35 + i * 0.3)), MatLib.surface(Color(0.9, 0.88, 0.8), 0.6))
+	_geo.add_cylinder(0.03, 0.03, 0.11, 8, Transform3D(Basis.IDENTITY, table + Vector3(0.1, 0.465, 0.35)), MatLib.glowing_surface(Color(0.1, 0.3, 0.5), Palette.CYAN, 0.25))
+	if not Engine.is_editor_hint():
+		var sit := Interactable.create(_root, Vector3(1.0, 0.8, 1.9), couch + Vector3.UP * 0.75, "Sit and watch TV")
+		sit.interacted.connect(_sit)
+
+
+func _build_kitchenette(y: float, half: float) -> void:
+	var cabinet := MatLib.surface(Color(0.2, 0.22, 0.26), 0.5, 0.3)
+	var counter := Vector3(6.55, y, HALL_FRONT_Z + 0.6)
+	_geo.add_box_at(Vector3(1.9, 0.9, 0.6), counter + Vector3.UP * 0.45, cabinet)
+	_geo.add_box_at(Vector3(1.94, 0.05, 0.64), counter + Vector3.UP * 0.92, MatLib.surface(Color(0.12, 0.12, 0.14), 0.2, 0.5))
+	_geo.add_box_at(Vector3(0.45, 0.02, 0.35), counter + Vector3(-0.45, 0.95, 0.0), MatLib.surface(Color(0.05, 0.05, 0.06), 0.1, 0.8))
+	for coil in [Vector3(0.35, 0.95, -0.1), Vector3(0.6, 0.95, 0.1)]:
+		_geo.add_cylinder(0.1, 0.1, 0.012, 10, Transform3D(Basis.IDENTITY, counter + coil), MatLib.neon(Palette.RED, 1.8))
+	_geo.add_cylinder(0.08, 0.07, 0.18, 8, Transform3D(Basis.IDENTITY, counter + Vector3(0.6, 1.05, 0.1)), MatLib.surface(Palette.METAL, 0.25, 0.85))
+	_geo.add_box_at(Vector3(1.9, 0.6, 0.35), counter + Vector3(0, 1.95, -0.12), cabinet)
+	_geo.add_bar(counter + Vector3(-0.9, 1.63, 0.0), counter + Vector3(0.9, 1.63, 0.0), 0.03, MatLib.neon(Palette.COOL_WHITE, 2.5))
+	BuildKit.box_collider_at(_body, Vector3(1.9, 0.95, 0.6), counter + Vector3.UP * 0.47)
+	var fridge := Vector3(half - 0.65, y, HALL_FRONT_Z + 0.65)
+	_geo.add_box_at(Vector3(0.68, 1.9, 0.65), fridge + Vector3.UP * 0.95, MatLib.surface(Color(0.7, 0.72, 0.75), 0.3, 0.4))
+	_geo.add_box_at(Vector3(0.3, 0.2, 0.02), fridge + Vector3(0.0, 1.45, 0.33), MatLib.neon(Palette.CYAN, 1.6))
+	_geo.add_bar(fridge + Vector3(-0.27, 0.6, 0.35), fridge + Vector3(-0.27, 1.3, 0.35), 0.03, MatLib.surface(Palette.METAL_DARK, 0.3, 0.8))
+	BuildKit.box_collider_at(_body, Vector3(0.68, 1.9, 0.65), fridge + Vector3.UP * 0.95)
+	if not Engine.is_editor_hint():
+		var open_fridge := Interactable.create(_root, Vector3(0.72, 1.2, 0.3), fridge + Vector3(0, 1.1, 0.38), "")
+		open_fridge.prompt_source = func() -> String: return "Grab a Synth-Soda" if _fridge_stocked else "Fridge (empty until tomorrow)"
+		open_fridge.interacted.connect(_take_soda)
+
+
+func _build_desk(y: float) -> void:
+	var desk := Vector3(2.7, y, HALL_FRONT_Z + 0.55)
+	_geo.add_box_at(Vector3(1.6, 0.05, 0.6), desk + Vector3.UP * 0.75, MatLib.surface(Color(0.1, 0.08, 0.07), 0.5))
+	for x: float in [-0.75, 0.75]:
+		_geo.add_box_at(Vector3(0.05, 0.75, 0.55), desk + Vector3(x, 0.375, 0), MatLib.surface(Palette.METAL_DARK, 0.4, 0.6))
+	_geo.add_box_at(Vector3(0.6, 0.38, 0.04), desk + Vector3(0, 1.05, -0.2), MatLib.surface(Color(0.03, 0.03, 0.04), 0.3))
+	_geo.add_box_at(Vector3(0.55, 0.32, 0.01), desk + Vector3(0, 1.05, -0.175), MatLib.neon(Palette.LIME.lerp(Palette.CYAN, 0.5), 1.4))
+	_geo.add_box_at(Vector3(0.45, 0.02, 0.15), desk + Vector3(0, 0.79, 0.05), MatLib.surface(Color(0.05, 0.05, 0.06), 0.4))
+	BuildKit.box_collider_at(_body, Vector3(1.6, 0.8, 0.6), desk + Vector3.UP * 0.4)
+	_geo.add_cylinder(0.25, 0.25, 0.08, 8, Transform3D(Basis.IDENTITY, desk + Vector3(0.1, 0.48, 0.7)), MatLib.surface(Color(0.1, 0.1, 0.12), 0.6))
+	_geo.add_cylinder(0.03, 0.03, 0.44, 6, Transform3D(Basis.IDENTITY, desk + Vector3(0.1, 0.22, 0.7)), MatLib.surface(Palette.METAL, 0.3, 0.8))
+	if not Engine.is_editor_hint():
+		var terminal := Interactable.create(_root, Vector3(0.7, 0.5, 0.4), desk + Vector3(0, 1.05, 0.0), "Check the terminal")
+		terminal.interacted.connect(func(_player: Player) -> void:
+			get_tree().call_group("hud", "show_message", "TERMINAL: 0 new messages. Rent: paid (sender unknown). Weather: night.", 4.0))
+
+
+func _build_clutter(y: float, half: float) -> void:
+	var cardboard := MatLib.surface(Color(0.45, 0.32, 0.18), 0.85)
+	for i in 4:
+		var size := Vector3(_rng.randf_range(0.35, 0.6), _rng.randf_range(0.25, 0.45), _rng.randf_range(0.35, 0.5))
+		var level := 0.0 if i < 2 else 0.42
+		_geo.add_box(size, Transform3D(Basis(Vector3.UP, _rng.randf_range(-0.3, 0.3)), Vector3(2.2 + (i % 2) * 0.6, y + level + size.y * 0.5, -4.0)), cardboard)
+	# A plant by the window and a poster above the bed.
+	var pot := Vector3(half - 0.6, y, -0.75)
+	_geo.add_cylinder(0.22, 0.18, 0.4, 8, Transform3D(Basis.IDENTITY, pot + Vector3.UP * 0.2), MatLib.surface(Color(0.2, 0.2, 0.22), 0.8))
+	for i in 6:
+		var base := pot + Vector3(_rng.randf_range(-0.1, 0.1), 0.4, _rng.randf_range(-0.1, 0.1))
+		_geo.add_bar(base, base + Vector3(_rng.randf_range(-0.3, 0.3), _rng.randf_range(0.4, 0.9), _rng.randf_range(-0.3, 0.3)), 0.03, MatLib.surface(Color(0.1, 0.4, 0.15), 0.8))
+	_geo.add_quad(Vector2(0.9, 1.2), Transform3D(Basis(Vector3.UP, PI * 0.5), Vector3(APARTMENT_X + 0.02, y + 1.9, -2.2)), MatLib.holo_ad(Palette.PINK, Palette.CYAN, 2, 5.0, 1.2))
+	# A pile of clothes and empty noodle cups by the bed.
+	_geo.add_box(Vector3(0.6, 0.15, 0.45), Transform3D(Basis(Vector3.UP, 0.5), Vector3(3.6, y + 0.075, -0.9)), MatLib.surface(Color(0.15, 0.15, 0.25), 0.95))
+	for i in 3:
+		_geo.add_cylinder(0.06, 0.05, 0.12, 8, Transform3D(Basis.IDENTITY, Vector3(3.95 + i * 0.12, y + 0.06, -3.4 + (i % 2) * 0.1)), MatLib.surface(Color(0.9, 0.88, 0.8), 0.6))
+
+
+# --- Apartment actions -------------------------------------------------------------------------
+
+## Fade out, skip six hours, reset the city for a new night and wake up next to the bed.
+func _sleep(player: Player) -> void:
+	if not GameState.is_free_roaming():
+		return
+	GameState.claim_ui(&"sleeping", false)
+	var hud := get_tree().get_first_node_in_group("hud")
+	await hud.fade_to(1.0, 1.2).finished
+	GameState.pass_night(6.0)
+	player.global_position = to_global(Vector3(3.9, UPPER_Y + 0.05, -2.2))
+	player.velocity = Vector3.ZERO
+	player.rotation.y = global_rotation.y + PI
+	player.head.rotation.x = 0.0
+	await get_tree().create_timer(1.0).timeout
+	get_tree().call_group("hud", "show_message", "You slept six hours. The city tidied up and the shops restocked.", 4.0)
+	await hud.fade_to(0.0, 1.2).finished
+	GameState.release_ui()
+
+
+## Sit on the couch: the camera glides to a seated view and the TV comes on.
+func _sit(player: Player) -> void:
+	if not GameState.is_free_roaming() or _seated:
+		return
+	GameState.claim_ui(&"seated", false)
+	_seated = player
+	_seat_lock = 0.4
+	var camera := player.camera
+	_seat_return = camera.global_transform
+	camera.top_level = true
+	camera.global_transform = _seat_return
+	player.weapon.get_parent().visible = false
+	var eye := to_global(Vector3(5.8, UPPER_Y + 1.15, -5.6))
+	var view := Transform3D(Basis.looking_at(_tv.global_position - eye, Vector3.UP), eye)
+	create_tween().tween_property(camera, "global_transform", view, 0.9).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	_tv.turn_on()
+	get_tree().call_group("hud", "show_message", "A / D  change channel     E / ESC  stand up", 4.0)
+
+
+func _stand_up() -> void:
+	var player := _seated
+	_seated = null
+	_tv.turn_off()
+	var camera := player.camera
+	var tween := create_tween()
+	tween.tween_property(camera, "global_transform", _seat_return, 0.7).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	await tween.finished
+	camera.top_level = false
+	camera.transform = Transform3D.IDENTITY
+	player.weapon.get_parent().visible = true
+	GameState.release_ui()
+
+
+func _take_soda(_player: Player) -> void:
+	if not _fridge_stocked:
+		get_tree().call_group("hud", "show_message", "Nothing but a lemon. Shops restock overnight; so does the fridge.", 2.5)
+		return
+	_fridge_stocked = false
+	GameState.inventory.add(&"synth_soda", 1)
+	get_tree().call_group("hud", "show_message", "+ Synth-Soda", 2.0)

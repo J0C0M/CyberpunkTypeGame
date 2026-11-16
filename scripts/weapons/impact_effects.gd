@@ -20,6 +20,7 @@ var _light_time := 0.0
 
 func _ready() -> void:
 	add_to_group("impact_effects")
+	add_to_group("night_cleanup")
 	var hole := _bullet_hole_texture()
 	for i in max_decals:
 		var decal := Decal.new()
@@ -73,6 +74,12 @@ func spawn_impact(point: Vector3, normal: Vector3, leave_decal: bool) -> void:
 	_light.global_position = point + normal * 0.3
 	_light.visible = true
 	_light_time = 0.05
+
+
+## Bullet holes and stains are gone by the next night.
+func clear_for_new_night() -> void:
+	for decal in _decals + _stains:
+		decal.visible = false
 
 
 ## Small burst of dark red cubes where a person is hit.
