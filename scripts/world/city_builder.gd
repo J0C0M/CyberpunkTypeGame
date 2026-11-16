@@ -710,32 +710,20 @@ func _vending_machine(pos: Vector3, facing: Vector3) -> void:
 
 
 func _build_parked_cars() -> void:
+	# Some cars are parked bumper to bumper so one explosion can set off the next.
 	var spots := [
-		[Vector3(-44, 0, 3.7), 0.0], [Vector3(-27, 0, 3.7), 0.0], [Vector3(41, 0, 3.7), 0.0],
-		[Vector3(-15, 0, -3.7), PI], [Vector3(52, 0, -3.7), PI], [Vector3(3.7, 0, 34), PI * 0.5],
-		[Vector3(-3.7, 0, -46), -PI * 0.5], [Vector3(3.7, 0, -24), PI * 0.5],
+		[Vector3(-44, 0, 3.7), 0.0], [Vector3(-38.6, 0, 3.7), 0.0], [Vector3(-27, 0, 3.7), 0.0], [Vector3(41, 0, 3.7), 0.0],
+		[Vector3(-15, 0, -3.7), PI], [Vector3(46.6, 0, -3.7), PI], [Vector3(52, 0, -3.7), PI], [Vector3(3.7, 0, 34), PI * 0.5],
+		[Vector3(-3.7, 0, -46), -PI * 0.5], [Vector3(3.7, 0, -24), PI * 0.5], [Vector3(3.7, 0, -29.6), PI * 0.5],
 	]
 	for spot in spots:
 		_car(Transform3D(Basis(Vector3.UP, spot[1]), spot[0]))
 
 
-## Low-poly hover-era sedan: body, cabin, wheels, lights and an underglow strip. Faces local +X.
+## Parked car (see Car): can be shot, catches fire and explodes. Faces local +X.
 func _car(xf: Transform3D) -> void:
-	var paint := MatLib.surface([Color(0.08, 0.08, 0.1), Color(0.35, 0.03, 0.06), Color(0.05, 0.12, 0.3), Color(0.5, 0.5, 0.55), Color(0.3, 0.22, 0.05)][_rng.randi() % 5] as Color, 0.25, 0.7)
-	var glass := MatLib.surface(Color(0.02, 0.03, 0.05), 0.08, 0.6)
-	var tyre := MatLib.surface(Color(0.02, 0.02, 0.02), 0.8)
-	_props.add_box(Vector3(4.4, 0.7, 1.9), xf.translated_local(Vector3(0, 0.65, 0)), paint)
-	_props.add_box(Vector3(2.3, 0.6, 1.7), xf.translated_local(Vector3(-0.25, 1.28, 0)), glass)
-	_props.add_box(Vector3(2.1, 0.08, 1.74), xf.translated_local(Vector3(-0.25, 1.6, 0)), paint)
-	for wx: float in [-1.4, 1.4]:
-		for wz: float in [-0.9, 0.9]:
-			_props.add_cylinder(0.36, 0.36, 0.28, 8, xf * Transform3D(Basis(Vector3.RIGHT, PI * 0.5), Vector3(wx, 0.36, wz)), tyre)
-	_props.add_box(Vector3(0.05, 0.12, 1.6), xf.translated_local(Vector3(2.21, 0.75, 0)), MatLib.neon(Palette.WARM_WHITE, 4.0))
-	_props.add_box(Vector3(0.05, 0.1, 1.7), xf.translated_local(Vector3(-2.21, 0.8, 0)), MatLib.neon(Palette.RED, 4.0))
-	var glow_color := Palette.random_neon(_rng)
-	_props.add_box(Vector3(3.6, 0.04, 1.5), xf.translated_local(Vector3(0, 0.27, 0)), MatLib.neon(glow_color, 3.0))
-	BuildKit.omni(_lights, xf * Vector3(0, 0.15, 0), glow_color, 1.2, 3.5)
-	BuildKit.box_collider(_body, Vector3(4.4, 1.6, 1.9), xf.translated_local(Vector3(0, 0.8, 0)))
+	var paint := [Color(0.08, 0.08, 0.1), Color(0.35, 0.03, 0.06), Color(0.05, 0.12, 0.3), Color(0.5, 0.5, 0.55), Color(0.3, 0.22, 0.05)][_rng.randi() % 5] as Color
+	Car.create(_breakables, xf, paint, Palette.random_neon(_rng))
 
 
 func _build_cables() -> void:

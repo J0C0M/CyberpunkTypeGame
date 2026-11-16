@@ -267,6 +267,34 @@ def spark_zap(rng):
     return normalize(lowpass(mix(out, [s * 0.4 for s in highpass(noise(n, rng), 3000)]), 6000), 0.5)
 
 
+def explosion(rng):
+    length = 2.8
+    n = seconds(length)
+    blast = [s * e for s, e in zip(lowpass(noise(n, rng), 1200), envelope(n, 0.002, 0.18))]
+    crack = [s * e * 0.8 for s, e in zip(highpass(noise(n, rng), 1500), envelope(n, 0.0008, 0.03))]
+    boom = []
+    phase = 0.0
+    for i in range(n):
+        t = i / SAMPLE_RATE
+        phase += 2 * math.pi * (32 + 70 * math.exp(-t * 8)) / SAMPLE_RATE
+        boom.append(math.sin(phase) * math.exp(-t / 0.4) * 1.3)
+    rumble = [s * e * 0.6 for s, e in zip(lowpass(noise(n, rng), 250), envelope(n, 0.05, 0.9))]
+    rattles = [place([v * 0.25 for v in highpass(lowpass(noise(seconds(0.06), rng), 4000), 800)], rng.uniform(0.3, 1.8), length) for _ in range(14)]
+    return normalize(soft_clip(mix(blast, crack, boom, rumble, *rattles), 2.2), 0.95)
+
+
+def fire_loop(rng):
+    n = seconds(4.0)
+    roar = [s * 0.5 for s in lowpass(noise(n, rng), 400)]
+    crackles = [0.0] * n
+    for _ in range(140):
+        start = rng.randrange(n - seconds(0.02))
+        amp = rng.uniform(0.2, 0.7)
+        for i in range(seconds(rng.uniform(0.003, 0.012))):
+            crackles[start + i] += rng.uniform(-1, 1) * amp
+    return normalize(crossfade_loop(mix(roar, highpass(crackles, 1200)), 0.5), 0.55)
+
+
 def main():
     rng = random.Random(2077)
     write("rifle_shot.wav", rifle_shot(rng))
@@ -286,6 +314,8 @@ def main():
     write("prop_break_wood.wav", prop_break_wood(rng))
     write("prop_break_concrete.wav", prop_break_concrete(rng))
     write("spark_zap.wav", spark_zap(rng))
+    write("explosion.wav", explosion(rng))
+    write("fire_loop.wav", fire_loop(rng))
 
 
 if __name__ == "__main__":

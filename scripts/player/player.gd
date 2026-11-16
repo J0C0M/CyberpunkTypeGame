@@ -32,6 +32,10 @@ var _last_step := 0
 var _camera_rest := Vector3.ZERO
 ## Visual recoil offset (x = pitch, y = yaw) that springs back to zero.
 var _recoil := Vector2.ZERO
+## Camera shake strength (explosions); decays over time.
+var _shake := 0.0
+## Push from explosions, added on top of walking and decaying quickly.
+var _knockback := Vector3.ZERO
 
 
 func _ready() -> void:
@@ -53,6 +57,17 @@ func apply_recoil(pitch_degrees: float, yaw_degrees: float) -> void:
 	_recoil += Vector2(deg_to_rad(pitch_degrees), deg_to_rad(yaw_degrees))
 
 
+## Shakes the camera (0 = none, 1 = a car exploding next to you).
+func apply_shake(strength: float) -> void:
+	_shake = maxf(_shake, strength)
+
+
+## Shoves the player (explosions). The upward part lifts them off the ground.
+func apply_knockback(impulse: Vector3) -> void:
+	_knockback += Vector3(impulse.x, 0.0, impulse.z)
+	velocity.y = maxf(velocity.y, impulse.y)
+
+
 func _physics_process(delta: float) -> void:
 	if not is_on_floor():
 		velocity.y -= _gravity * delta
@@ -67,10 +82,13 @@ func _physics_process(delta: float) -> void:
 	var accel := ground_acceleration if is_on_floor() else air_acceleration
 	var horizontal := Vector2(velocity.x, velocity.z)
 	horizontal = horizontal.lerp(Vector2(direction.x, direction.z) * target_speed, 1.0 - exp(-accel * delta))
-	velocity.x = horizontal.x
-	velocity.z = horizontal.y
+	velocity.x = horizontal.x + _knockback.x
+	velocity.z = horizontal.y + _knockback.z
+	_knockback = _knockback.lerp(Vector3.ZERO, 1.0 - exp(-4.0 * delta))
 
 	move_and_slide()
+	velocity.x -= _knockback.x
+	velocity.z -= _knockback.z
 	_update_camera_effects(delta)
 
 
@@ -93,4 +111,7 @@ func _update_camera_effects(delta: float) -> void:
 	camera.fov = lerpf(camera.fov, target_fov, 1.0 - exp(-6.0 * delta))
 
 	_recoil = _recoil.lerp(Vector2.ZERO, 1.0 - exp(-9.0 * delta))
-	recoil_pivot.rotation = Vector3(_recoil.x, _recoil.y, 0.0)
+	_shake = move_toward(_shake, 0.0, delta * 1.4)
+	var jitter := Vector3(randf_range(-1, 1), randf_range(-1, 1), randf_range(-1, 1)) * _shake * _shake
+	recoil_pivot.rotation = Vector3(_recoil.x + jitter.x * 0.05, _recoil.y + jitter.y * 0.05, jitter.z * 0.03)
+	camera.position += jitter * 0.08
