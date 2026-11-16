@@ -20,8 +20,8 @@ static func spawn(parent: Node, position: Vector3, item: StringName, count: int)
 	var pickup := Pickup.new()
 	pickup.item_id = item
 	pickup.amount = count
-	pickup.position = position
 	parent.add_child(pickup)
+	pickup.global_position = position
 	return pickup
 
 

@@ -1,0 +1,23 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/world/shop_interior.gd" id="1_shop"]
+[ext_resource type="PackedScene" path="res://scenes/actors/merchant.tscn" id="2_merchant"]
+
+[node name="KoiBar" type="Node3D"]
+script = ExtResource("1_shop")
+theme = 1
+place_id = &"bar"
+place_label = "Koi Bar"
+sign_text = "KOI BAR"
+sign_subtext = "酒"
+accent = Color(0.1, 0.88, 1, 1)
+floor_surface = &"tile"
+
+[node name="Merchant" parent="." instance=ExtResource("2_merchant")]
+merchant_id = &"vex"
+display_name = "Vex"
+shop_name = "Koi Bar"
+catalog = &"bar"
+look_seed = 21
+is_guide = false
+greeting = "What are you drinking?"

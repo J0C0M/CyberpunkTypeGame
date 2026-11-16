@@ -23,13 +23,26 @@ const SHOP_NAMES := [
 ]
 const BLADE_NAMES := ["BAR", "HOTEL", "CLUB", "ZEN", "KOI", "LOVE", "DOJO", "ラーメン", "ホテル", "酒", "薬", "夜", "電気"]
 
+## Lots whose ground floor (or more) is a walk-in interior scene instead of solid building.
+## Frontage index and the stretch along it, the scene, and optionally a fixed height and the
+## vertical ranges ("hollow") the interior fills; by default just the ground floor.
+const INTERIOR_LOTS := [
+	{"frontage": 0, "from": 9.0, "to": 18.0, "scene": "res://scenes/shops/noodle_shop.tscn", "height": 34.0},
+	{"frontage": 0, "from": 18.0, "to": 30.0, "scene": "res://scenes/world/sushi_cafe.tscn", "height": 42.0},
+	{"frontage": 1, "from": -38.0, "to": -26.0, "scene": "res://scenes/shops/cyberware_shop.tscn"},
+	{"frontage": 2, "from": -32.0, "to": -20.0, "scene": "res://scenes/shops/gun_shop.tscn"},
+	{"frontage": 3, "from": 9.0, "to": 20.0, "scene": "res://scenes/shops/bar.tscn"},
+	{"frontage": 3, "from": 20.0, "to": 32.0, "scene": "res://scenes/shops/clinic.tscn"},
+	{"frontage": 5, "from": 29.0, "to": 41.0, "scene": "res://scenes/shops/pawn_shop.tscn"},
+]
+## Height of the shop-front band; interiors fill everything below it.
+const INTERIOR_TOP := 4.8
+
 @export var city_seed := 2077
 ## How far the street corridors continue past the barricades.
 @export var street_length := 460.0
 ## Lots closer than this to the crossing get storefronts, lights and colliders.
 @export var detail_distance := 78.0
-## World-X stretch of the north side of the main street that the sushi cafe occupies.
-@export var cafe_lot := Vector2(18.0, 30.0)
 @export_tool_button("Rebuild city") var rebuild_action := build
 
 ## Walkable sidewalk and crosswalk triangles for the NPC navmesh (filled by build()).
@@ -58,7 +71,7 @@ func build() -> void:
 	BuildKit.clear_generated(self)
 	walkable_faces = PackedVector3Array()
 	_footprints.clear()
-	_keep_clear = [Rect2(cafe_lot.x - 1.0, -SIDEWALK_OUTER, cafe_lot.y - cafe_lot.x + 2.0, SIDEWALK_OUTER - ROAD_HALF)]
+	_keep_clear = []
 	_rng.seed = city_seed
 	_root = BuildKit.generated_root(self, "Generated")
 	_body = BuildKit.static_body(_root, "Collision")
@@ -112,7 +125,7 @@ func _frontages() -> Array[Dictionary]:
 	var far := street_length
 	var corner := SIDEWALK_OUTER + BLOCK_DEPTH
 	return [
-		{"facing": Vector3.BACK, "line": Vector3(0, 0, -SIDEWALK_OUTER), "from": SIDEWALK_OUTER, "to": far, "reserved": cafe_lot},
+		{"facing": Vector3.BACK, "line": Vector3(0, 0, -SIDEWALK_OUTER), "from": SIDEWALK_OUTER, "to": far},
 		{"facing": Vector3.BACK, "line": Vector3(0, 0, -SIDEWALK_OUTER), "from": -far, "to": -SIDEWALK_OUTER},
 		{"facing": Vector3.FORWARD, "line": Vector3(0, 0, SIDEWALK_OUTER), "from": -far, "to": -SIDEWALK_OUTER},
 		{"facing": Vector3.FORWARD, "line": Vector3(0, 0, SIDEWALK_OUTER), "from": SIDEWALK_OUTER, "to": far},
@@ -123,15 +136,25 @@ func _frontages() -> Array[Dictionary]:
 	]
 
 
-func _split_lots(from: float, to: float, reserved: Vector2) -> Array[Vector2]:
+## Splits [from, to] into lots, keeping the reserved (interior) stretches exactly as given.
+func _split_lots(from: float, to: float, reserved: Array[Vector2]) -> Array[Vector2]:
 	var lots: Array[Vector2] = []
-	if reserved != Vector2.ZERO and reserved.x >= from and reserved.y <= to:
-		_subdivide(from, reserved.x, lots)
-		lots.append(reserved)
-		_subdivide(reserved.y, to, lots)
-	else:
-		_subdivide(from, to, lots)
+	var t := from
+	for lot in reserved:
+		_subdivide(t, lot.x, lots)
+		lots.append(lot)
+		t = lot.y
+	_subdivide(t, to, lots)
 	return lots
+
+
+func _interior_lots(frontage_index: int) -> Array[Dictionary]:
+	var result: Array[Dictionary] = []
+	for entry in INTERIOR_LOTS:
+		if entry["frontage"] == frontage_index:
+			result.append(entry)
+	result.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return a["from"] < b["from"])
+	return result
 
 
 func _subdivide(from: float, to: float, lots: Array[Vector2]) -> void:
@@ -260,30 +283,44 @@ func _build_frontage(frontage: Dictionary, index: int) -> void:
 	var x_axis := Vector3.UP.cross(facing)
 	var lot_basis := Basis(x_axis, Vector3.UP, facing)
 	var line: Vector3 = frontage["line"]
-	var reserved: Vector2 = frontage.get("reserved", Vector2.ZERO)
+	var interiors := _interior_lots(index)
+	var reserved: Array[Vector2] = []
+	for entry in interiors:
+		reserved.append(Vector2(entry["from"], entry["to"]))
 	var near := GeoBatch.new()
 	var far := GeoBatch.new()
 	for lot in _split_lots(frontage["from"], frontage["to"], reserved):
 		var xf := Transform3D(lot_basis, line + x_axis * lot.x)
 		var is_near := minf(absf(lot.x), absf(lot.y)) < detail_distance
-		var is_cafe := reserved != Vector2.ZERO and lot == reserved
-		_build_building(near if is_near else far, xf, lot.y - lot.x, is_near, is_cafe)
+		var interior: Dictionary = {}
+		for entry in interiors:
+			if is_equal_approx(entry["from"], lot.x):
+				interior = entry
+		_build_building(near if is_near else far, xf, lot.y - lot.x, is_near, interior)
 	near.build_into(_root, "Frontage%dNear" % index)
 	far.build_into(_root, "Frontage%dFar" % index, false)
 
 
-func _build_building(geo: GeoBatch, xf: Transform3D, width: float, near: bool, is_cafe: bool) -> void:
+## A building on one lot. Interior lots get their scene instanced and stay hollow where it lives.
+func _build_building(geo: GeoBatch, xf: Transform3D, width: float, near: bool, interior: Dictionary) -> void:
 	var depth := BLOCK_DEPTH
+	var has_interior := not interior.is_empty()
 	var height := _rng.randf_range(14.0, 48.0) if near else _rng.randf_range(18.0, 75.0)
 	if _rng.randf() < (0.2 if near else 0.28):
 		height = _rng.randf_range(65.0, 130.0) if near else _rng.randf_range(80.0, 190.0)
-	if is_cafe:
-		height = 42.0
+	if has_interior:
+		height = interior.get("height", maxf(height, 18.0))
 	var tint := _rng.randf_range(0.45, 0.8)
 	geo.color = Color(tint, tint * _rng.randf_range(0.9, 1.0), tint * _rng.randf_range(0.95, 1.15), _rng.randf_range(0.28, 0.65))
 	var facade := MatLib.facade(1, 5.0)
-	var base_y := SushiCafe.SHELL_TOP if is_cafe else 0.0
-	geo.add_box(Vector3(width, height - base_y, depth), _at(xf, width * 0.5, base_y + (height - base_y) * 0.5, -depth * 0.5), facade)
+	var hollow: Array = interior.get("hollow", [Vector2(0.0, INTERIOR_TOP)]) if has_interior else []
+	var y := 0.0
+	for gap in hollow + [Vector2(height, height)]:
+		if gap.x > y:
+			geo.add_box(Vector3(width, gap.x - y, depth), _at(xf, width * 0.5, (y + gap.x) * 0.5, -depth * 0.5), facade)
+		y = maxf(y, gap.y)
+	if has_interior:
+		_place_interior(interior, xf, width)
 	var top := height
 	if height > 25.0 and _rng.randf() < 0.45:
 		var setback_width := width * _rng.randf_range(0.5, 0.85)
@@ -297,21 +334,32 @@ func _build_building(geo: GeoBatch, xf: Transform3D, width: float, near: bool, i
 	_footprints.append([Rect2(Vector2(minf(a.x, b.x), minf(a.z, b.z)), Vector2(absf(b.x - a.x), absf(b.z - a.z))), top + 16.0])
 
 	if near:
-		_decorate_near_building(geo, xf, width, height, top, is_cafe)
-		if not is_cafe:
+		_decorate_near_building(geo, xf, width, height, top, has_interior)
+		if not has_interior:
 			BuildKit.box_collider(_body, Vector3(width, 12.0, depth), _at(xf, width * 0.5, 6.0, -depth * 0.5))
 	else:
 		_decorate_far_building(geo, xf, width, height)
 
 
-func _decorate_near_building(geo: GeoBatch, xf: Transform3D, width: float, height: float, top: float, is_cafe: bool) -> void:
+func _place_interior(entry: Dictionary, xf: Transform3D, width: float) -> void:
+	var interior := (load(entry["scene"]) as PackedScene).instantiate() as Node3D
+	interior.transform = _at(xf, width * 0.5, 0.0, 0.0)
+	if "width" in interior:
+		interior.set("width", width)
+	_root.add_child(interior)
+	var a := xf * Vector3(0, 0, 0)
+	var b := xf * Vector3(width, 0, SIDEWALK_OUTER - ROAD_HALF)
+	_keep_clear.append(Rect2(Vector2(minf(a.x, b.x), minf(a.z, b.z)), Vector2(absf(b.x - a.x), absf(b.z - a.z))))
+
+
+func _decorate_near_building(geo: GeoBatch, xf: Transform3D, width: float, height: float, top: float, has_interior: bool) -> void:
 	var metal := MatLib.surface(Palette.METAL, 0.5, 0.6)
 	var metal_dark := MatLib.surface(Palette.METAL_DARK, 0.5, 0.5)
-	if not is_cafe:
+	if not has_interior:
 		_storefront(geo, xf, width)
 
 	# Vertical blade sign with stacked letters on both faces.
-	if height > 14.0 and not is_cafe and _rng.randf() < 0.5:
+	if height > 14.0 and not has_interior and _rng.randf() < 0.5:
 		var word: String = BLADE_NAMES[_rng.randi() % BLADE_NAMES.size()]
 		var color := Palette.random_neon(_rng)
 		var sign_height := clampf(word.length() * 1.0 + 0.8, 2.5, 6.5)
@@ -390,6 +438,8 @@ func _decorate_far_building(geo: GeoBatch, xf: Transform3D, width: float, height
 
 
 func _storefront(geo: GeoBatch, xf: Transform3D, width: float) -> void:
+	if width < 7.0:
+		return
 	var color := Palette.random_neon(_rng)
 	var frame := MatLib.surface(Palette.METAL_DARK, 0.4, 0.5)
 	if _rng.randf() < 0.22:
@@ -817,66 +867,4 @@ func _build_steam_vents() -> void:
 	var cover := MatLib.surface(Color(0.08, 0.08, 0.09), 0.3, 0.8)
 	for pos in [Vector3(-20, 0, -1.5), Vector3(14, 0, 2.0), Vector3(-1.5, 0, 26), Vector3(2.0, 0, -42), Vector3(46, 0, -1.0)]:
 		_props.add_cylinder(0.55, 0.55, 0.03, 10, Transform3D(Basis.IDENTITY, pos + Vector3.UP * 0.015), cover)
-		_root.add_child(_steam(pos))
-
-
-func _steam(pos: Vector3) -> GPUParticles3D:
-	var process := ParticleProcessMaterial.new()
-	process.direction = Vector3.UP
-	process.spread = 12.0
-	process.initial_velocity_min = 0.6
-	process.initial_velocity_max = 1.2
-	process.gravity = Vector3(0.15, 0.25, 0.0)
-	process.scale_min = 0.6
-	process.scale_max = 1.2
-	var grow := Curve.new()
-	grow.add_point(Vector2(0, 0.4))
-	grow.add_point(Vector2(1, 2.5))
-	var grow_texture := CurveTexture.new()
-	grow_texture.curve = grow
-	process.scale_curve = grow_texture
-	var fade := Gradient.new()
-	fade.set_color(0, Color(1, 1, 1, 0.0))
-	fade.set_color(1, Color(1, 1, 1, 0.0))
-	fade.add_point(0.2, Color(1, 1, 1, 0.18))
-	var fade_texture := GradientTexture1D.new()
-	fade_texture.gradient = fade
-	process.color_ramp = fade_texture
-	process.emission_shape = ParticleProcessMaterial.EMISSION_SHAPE_SPHERE
-	process.emission_sphere_radius = 0.4
-
-	var puff_material := StandardMaterial3D.new()
-	puff_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	puff_material.vertex_color_use_as_albedo = true
-	puff_material.albedo_color = Color(0.75, 0.75, 0.85)
-	puff_material.billboard_mode = BaseMaterial3D.BILLBOARD_PARTICLES
-	puff_material.albedo_texture = _soft_puff_texture()
-	var quad := QuadMesh.new()
-	quad.size = Vector2(1.2, 1.2)
-	quad.material = puff_material
-
-	var particles := GPUParticles3D.new()
-	particles.name = "Steam"
-	particles.position = pos
-	particles.amount = 28
-	particles.lifetime = 4.0
-	particles.preprocess = 4.0
-	particles.process_material = process
-	particles.draw_pass_1 = quad
-	particles.visibility_aabb = AABB(Vector3(-3, 0, -3), Vector3(6, 8, 6))
-	particles.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	return particles
-
-
-func _soft_puff_texture() -> Texture2D:
-	var gradient := Gradient.new()
-	gradient.set_color(0, Color(1, 1, 1, 1))
-	gradient.set_color(1, Color(1, 1, 1, 0))
-	var texture := GradientTexture2D.new()
-	texture.gradient = gradient
-	texture.fill = GradientTexture2D.FILL_RADIAL
-	texture.fill_from = Vector2(0.5, 0.5)
-	texture.fill_to = Vector2(0.5, 0.0)
-	texture.width = 32
-	texture.height = 32
-	return texture
+		_root.add_child(BuildKit.steam(pos))

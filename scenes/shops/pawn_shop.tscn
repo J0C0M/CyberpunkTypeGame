@@ -1,0 +1,23 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/world/shop_interior.gd" id="1_shop"]
+[ext_resource type="PackedScene" path="res://scenes/actors/merchant.tscn" id="2_merchant"]
+
+[node name="LuckyPawn" type="Node3D"]
+script = ExtResource("1_shop")
+theme = 5
+place_id = &"pawn"
+place_label = "Lucky Pawn"
+sign_text = "LUCKY PAWN"
+sign_subtext = "質"
+accent = Color(1, 0.58, 0.12, 1)
+floor_surface = &"tile"
+
+[node name="Merchant" parent="." instance=ExtResource("2_merchant")]
+merchant_id = &"mo"
+display_name = "Mo"
+shop_name = "Lucky Pawn"
+catalog = &"pawn"
+look_seed = 62
+is_guide = false
+greeting = "Buying, selling, no questions."

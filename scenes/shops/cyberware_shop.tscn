@@ -1,0 +1,23 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/world/shop_interior.gd" id="1_shop"]
+[ext_resource type="PackedScene" path="res://scenes/actors/merchant.tscn" id="2_merchant"]
+
+[node name="Cyberware" type="Node3D"]
+script = ExtResource("1_shop")
+theme = 2
+place_id = &"cyberware"
+place_label = "Cyberware"
+sign_text = "CYBERWARE"
+sign_subtext = "電脳"
+accent = Color(0.62, 0.28, 1, 1)
+floor_surface = &"metal"
+
+[node name="Merchant" parent="." instance=ExtResource("2_merchant")]
+merchant_id = &"ichi"
+display_name = "Doc Ichi"
+shop_name = "Cyberware"
+catalog = &"cyberware"
+look_seed = 33
+is_guide = false
+greeting = "Chrome, lenses, wire. Everything fits if you push hard enough."

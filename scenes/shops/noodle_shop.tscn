@@ -1,0 +1,23 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/world/shop_interior.gd" id="1_shop"]
+[ext_resource type="PackedScene" path="res://scenes/actors/merchant.tscn" id="2_merchant"]
+
+[node name="NoodleBar" type="Node3D"]
+script = ExtResource("1_shop")
+theme = 0
+place_id = &"noodle"
+place_label = "Noodle Bar"
+sign_text = "NOODLE BAR"
+sign_subtext = "ラーメン"
+accent = Color(1, 0.16, 0.62, 1)
+floor_surface = &"wood"
+
+[node name="Merchant" parent="." instance=ExtResource("2_merchant")]
+merchant_id = &"ren"
+display_name = "Ren"
+shop_name = "Noodle Bar"
+catalog = &"noodles"
+look_seed = 7
+is_guide = true
+greeting = "Sit, sit! Bowl's hot."

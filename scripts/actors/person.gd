@@ -83,9 +83,12 @@ func _process(delta: float) -> void:
 
 
 func _on_damaged(hit: HitInfo) -> void:
-	if hit.kind == HitInfo.Kind.BULLET:
+	if hit.kind == HitInfo.Kind.BULLET and killable:
 		ImpactEffects.spawn_blood_at(self, hit.position, -hit.direction)
 		SfxPool.play_at(self, HIT_SOUND, hit.position, -6.0, 0.15, 4.0)
+	elif hit.kind == HitInfo.Kind.BULLET:
+		# People who can't die (the guide) just have a very lucky streak.
+		ImpactEffects.spawn_sparks_at(self, hit.position, hit.normal)
 	_flinch = 1.0
 	_on_hurt(hit)
 

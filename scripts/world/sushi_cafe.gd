@@ -1,7 +1,7 @@
 @tool
 class_name SushiCafe
 extends Node3D
-## Futuristic kaiten (conveyor-belt) sushi cafe built from primitives. The player spawns inside.
+## Futuristic kaiten (conveyor-belt) sushi cafe built from primitives, with Chef Hiro behind the counter.
 ## Local space: the shop front is the plane z = 0 facing +Z (the street); the room runs to z = -DEPTH.
 ## Everything visual is generated in _ready (also in the editor), so it is easy to swap for a model.
 
@@ -37,6 +37,8 @@ func _ready() -> void:
 	geo.build_into(root, "CafeGeometry")
 	_build_plates(root)
 	_build_lights(root)
+	if not Engine.is_editor_hint():
+		GameState.register_place(&"sushi", "Sushi Kaiten", global_transform * Vector3(0, 0, 2.0))
 
 
 func _process(delta: float) -> void:
