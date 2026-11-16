@@ -6,7 +6,7 @@ extends Node
 const STREET := preload("res://assets/music/street.ogg")
 const STREET_DB := -9.0
 ## Extra Music-bus attenuation per UI mode.
-const DUCK := {&"dialogue": -9.0, &"trade": -6.0, &"seated": -40.0, &"paused": -10.0}
+const DUCK := {&"dialogue": -9.0, &"trade": -6.0, &"inventory": -6.0, &"seated": -40.0, &"paused": -10.0}
 
 var _street: AudioStreamPlayer
 var _zones: Array[MusicZone] = []

@@ -14,6 +14,7 @@
 [ext_resource type="Script" path="res://scripts/combat/debris_pool.gd" id="16_debris"]
 [ext_resource type="Script" path="res://scripts/core/sfx_pool.gd" id="17_sfx"]
 [ext_resource type="Script" path="res://scripts/combat/explosions.gd" id="18_explosions"]
+[ext_resource type="Script" path="res://scripts/items/item_scatter.gd" id="19_scatter"]
 
 [node name="World" type="Node3D"]
 
@@ -151,6 +152,9 @@ script = ExtResource("17_sfx")
 
 [node name="Explosions" type="Node3D" parent="."]
 script = ExtResource("18_explosions")
+
+[node name="ItemScatter" type="Node3D" parent="."]
+script = ExtResource("19_scatter")
 
 [node name="CityAmbience" type="AudioStreamPlayer" parent="."]
 stream = ExtResource("14_ambience")

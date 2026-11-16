@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Script" path="res://scripts/items/item_data.gd" id="1_item"]
+
+[resource]
+script = ExtResource("1_item")
+id = &"ammo_ks47"
+display_name = "KS-47 Rounds"
+category = &"ammo"
+price = 2
+pack = 30
+stack_size = 150
+description = "7.62 caseless, boxed in thirties."
+inspect_text = "Caseless rounds in a waxed cardboard box stamped IRON LOTUS. Since the Ban every box is counted twice."
+model = &"ammo_box"

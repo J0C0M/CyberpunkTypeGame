@@ -68,6 +68,7 @@ func _ready() -> void:
 		GameState.register_place(&"apartment", "Neo-Heights 1107", global_transform * Vector3(0, 0, 2.0))
 		GameState.night_passed.connect(func() -> void: _fridge_stocked = true)
 		_add_music_zones()
+		add_to_group("saveable")
 
 
 func _half() -> float:
@@ -401,6 +402,8 @@ func _build_hallway() -> void:
 		var door := Door.new()
 		door.number = entry[3]
 		door.locked = entry[4]
+		if entry[3] == "1107":
+			door.key_item = &"keycard_1107"
 		door.accent = ACCENT
 		door.name = "Door" + entry[3]
 		door.position = Vector3(entry[0], UPPER_Y, entry[1] + (0.04 if entry[2] == PI else -0.04) * -1.0)
@@ -579,7 +582,8 @@ func _sleep(player: Player) -> void:
 	player.rotation.y = global_rotation.y + PI
 	player.head.rotation.x = 0.0
 	await get_tree().create_timer(1.0).timeout
-	get_tree().call_group("hud", "show_message", "You slept six hours. The city tidied up and the shops restocked.", 4.0)
+	var saved := SaveGame.save_game()
+	get_tree().call_group("hud", "show_message", "You slept six hours. The city tidied up and the shops restocked." + ("\nGame saved." if saved else ""), 4.0)
 	await hud.fade_to(0.0, 1.2).finished
 	GameState.release_ui()
 
@@ -595,7 +599,7 @@ func _sit(player: Player) -> void:
 	_seat_return = camera.global_transform
 	camera.top_level = true
 	camera.global_transform = _seat_return
-	player.weapon.get_parent().visible = false
+	player.weapon_holder.visible = false
 	var eye := to_global(Vector3(5.8, UPPER_Y + 1.15, -5.6))
 	var view := Transform3D(Basis.looking_at(_tv.global_position - eye, Vector3.UP), eye)
 	create_tween().tween_property(camera, "global_transform", view, 0.9).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
@@ -613,7 +617,7 @@ func _stand_up() -> void:
 	await tween.finished
 	camera.top_level = false
 	camera.transform = Transform3D.IDENTITY
-	player.weapon.get_parent().visible = true
+	player.weapon_holder.visible = true
 	GameState.release_ui()
 
 
@@ -621,9 +625,23 @@ func _take_soda(_player: Player) -> void:
 	if not _fridge_stocked:
 		get_tree().call_group("hud", "show_message", "Nothing but a lemon. Shops restock overnight; so does the fridge.", 2.5)
 		return
+	if GameState.inventory.add(&"synth_soda", 1) == 0:
+		get_tree().call_group("hud", "show_message", "Your pockets are full.", 2.0)
+		return
 	_fridge_stocked = false
-	GameState.inventory.add(&"synth_soda", 1)
-	get_tree().call_group("hud", "show_message", "+ Synth-Soda", 2.0)
+	get_tree().call_group("hud", "notify_item", "+ Synth-Soda", ItemDB.color(&"synth_soda"))
+
+
+func save_key() -> String:
+	return "apartment_block"
+
+
+func save_data() -> Dictionary:
+	return {"fridge_stocked": _fridge_stocked}
+
+
+func load_data(data: Dictionary) -> void:
+	_fridge_stocked = bool(data.get("fridge_stocked", true))
 
 
 ## Elevator music in the lobby and both cabs, a quiet hallway and a radio in the apartment.

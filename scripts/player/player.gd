@@ -24,8 +24,13 @@ extends CharacterBody3D
 @onready var head: Node3D = $Head
 @onready var recoil_pivot: Node3D = $Head/RecoilPivot
 @onready var camera: Camera3D = $Head/RecoilPivot/Camera3D
-@onready var weapon: Rifle = $Head/RecoilPivot/Camera3D/WeaponHolder/Rifle
+@onready var weapon_holder: WeaponHolder = $Head/RecoilPivot/Camera3D/WeaponHolder
 @onready var footsteps: Footsteps = $Footsteps
+
+## The gun in hand (null when the player owns no weapon).
+var weapon: Firearm:
+	get:
+		return weapon_holder.current if weapon_holder else null
 
 var is_sprinting := false
 ## The Interactable under the crosshair within reach, or null. The HUD shows its prompt.
@@ -53,6 +58,11 @@ func look(relative: Vector2) -> void:
 	var sensitivity := Settings.mouse_sensitivity
 	rotate_y(-relative.x * sensitivity)
 	head.rotation.x = clampf(head.rotation.x - relative.y * sensitivity, deg_to_rad(-88.0), deg_to_rad(88.0))
+
+
+## Mouse wheel: next or previous weapon on the hotbar.
+func cycle_weapon(direction: int) -> void:
+	weapon_holder.cycle(direction)
 
 
 ## Called by the weapon on every shot. Part of the kick stays (the view climbs), the rest springs back.
@@ -85,7 +95,8 @@ func _physics_process(delta: float) -> void:
 	var direction := (transform.basis * Vector3(input_dir.x, 0.0, input_dir.y)).normalized()
 	is_sprinting = Input.is_action_pressed("sprint") and input_dir.y < -0.1 and is_on_floor()
 
-	var target_speed := sprint_speed if is_sprinting else walk_speed
+	# Sodas and energy drinks put a little extra into the sprint.
+	var target_speed := sprint_speed * (1.0 + GameState.effect(&"sprint")) if is_sprinting else walk_speed
 	var accel := ground_acceleration if is_on_floor() else air_acceleration
 	var horizontal := Vector2(velocity.x, velocity.z)
 	horizontal = horizontal.lerp(Vector2(direction.x, direction.z) * target_speed, 1.0 - exp(-accel * delta))
@@ -100,6 +111,23 @@ func _physics_process(delta: float) -> void:
 	footsteps.update(self, delta, Vector2(global_position.x - before.x, global_position.z - before.z).length())
 	_update_interaction()
 	_update_camera_effects(delta)
+
+
+func save_data() -> Dictionary:
+	return {
+		"position": SaveGame.vec_to_array(global_position),
+		"yaw": rotation.y,
+		"pitch": head.rotation.x,
+		"weapons": weapon_holder.save_data(),
+	}
+
+
+func load_data(data: Dictionary) -> void:
+	global_position = SaveGame.array_to_vec(data.get("position"), global_position)
+	rotation = Vector3(0.0, float(data.get("yaw", rotation.y)), 0.0)
+	head.rotation.x = float(data.get("pitch", 0.0))
+	velocity = Vector3.ZERO
+	weapon_holder.load_data(data.get("weapons", {}))
 
 
 ## Looks for an Interactable in front of the camera; walls and props block the ray.

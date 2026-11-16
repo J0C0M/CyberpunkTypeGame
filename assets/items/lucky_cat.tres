@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Script" path="res://scripts/items/item_data.gd" id="1_item"]
+
+[resource]
+script = ExtResource("1_item")
+id = &"lucky_cat"
+display_name = "Lucky Cat Charm"
+category = &"valuable"
+price = 45
+pack = 1
+stack_size = 5
+description = "Waves at you. Probably lucky."
+inspect_text = "A gold-painted maneki-neko with a solar cell. It waves even in the dark, which is unsettling."
+model = &"cat"

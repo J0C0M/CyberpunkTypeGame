@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Script" path="res://scripts/items/item_data.gd" id="1_item"]
+
+[resource]
+script = ExtResource("1_item")
+id = &"med_patch"
+display_name = "Med Patch"
+category = &"medical"
+price = 40
+pack = 1
+stack_size = 10
+description = "Stick on, bleed less."
+inspect_text = "A gel patch full of coagulant and painkillers. Clinic 24H brand, logo in green neon so you can find it in the dark."
+model = &"patch"
+effect = &"regen"
+effect_strength = 4.0
+effect_duration = 8.0
+heal = 45.0
+use_verb = "Apply"
+effect_label = "PATCHED"

@@ -469,6 +469,55 @@ def tv_static(rng):
     return normalize(crossfade_loop(bandpass(noise(n, rng), 400, 6000), 0.3), 0.35)
 
 
+def eat(rng):
+    """Three soft crunchy bites."""
+    total = 0.75
+    bites = []
+    for k in range(3):
+        n = seconds(0.12)
+        crunch = [v * e for v, e in zip(bandpass(noise(n, rng), 900, 4500), envelope(n, 0.004, 0.03))]
+        bites.append(place(crunch, 0.05 + k * 0.22 + rng.uniform(-0.02, 0.02), total))
+    return normalize(mix(*bites), 0.5)
+
+
+def drink(rng):
+    """A can hiss, then two gulps."""
+    total = 0.9
+    n = seconds(0.25)
+    fizz = [v * e * 0.5 for v, e in zip(highpass(noise(n, rng), 3500), envelope(n, 0.002, 0.08))]
+    gulps = []
+    for k in range(2):
+        g = seconds(0.14)
+        phase, out = 0.0, []
+        for i in range(g):
+            t = i / SAMPLE_RATE
+            freq = 180.0 + 220.0 * t / 0.14
+            phase += 2 * math.pi * freq / SAMPLE_RATE
+            out.append(math.sin(phase) * math.sin(math.pi * i / g) ** 2)
+        gulps.append(place(lowpass(out, 900), 0.3 + k * 0.25, total))
+    return normalize(mix(place(fizz, 0.0, total), *gulps), 0.5)
+
+
+def med_patch(rng):
+    """Backing paper tearing, then a short pneumatic hiss."""
+    total = 0.6
+    n = seconds(0.18)
+    tear = [v * (0.5 + 0.5 * math.sin(i * 0.37)) * math.sin(math.pi * i / n) for i, v in enumerate(bandpass(noise(n, rng), 1500, 6000))]
+    h = seconds(0.3)
+    hiss = [v * e for v, e in zip(highpass(noise(h, rng), 2500), envelope(h, 0.01, 0.12))]
+    return normalize(mix(place(tear, 0.0, total), place(hiss, 0.25, total)), 0.45)
+
+
+def weapon_switch(rng):
+    return normalize(mix(place(click(rng, 1500, 0.07, 0.015), 0.0, 0.3), place(click(rng, 2800, 0.06, 0.008), 0.14, 0.3)), 0.5)
+
+
+def item_drop(rng):
+    n = seconds(0.3)
+    thud = [v * e for v, e in zip(lowpass(noise(n, rng), 500), envelope(n, 0.002, 0.05))]
+    return normalize(mix(thud, place(click(rng, 1800, 0.05, 0.01), 0.02, 0.3)), 0.5)
+
+
 def main():
     sounds = [
         ("rifle_shot.wav", rifle_shot),
@@ -496,6 +545,11 @@ def main():
         ("door_slide.wav", door_slide),
         ("elevator_ding.wav", elevator_ding),
         ("elevator_hum.wav", elevator_hum),
+        ("eat.wav", eat),
+        ("drink.wav", drink),
+        ("med_patch.wav", med_patch),
+        ("weapon_switch.wav", weapon_switch),
+        ("item_drop.wav", item_drop),
         ("tv/news.wav", tv_news),
         ("tv/advert.wav", tv_advert),
         ("tv/anime.wav", tv_anime),

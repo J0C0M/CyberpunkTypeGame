@@ -1,8 +1,10 @@
 extends CanvasLayer
-## Pause menu (Esc): resume, volume per audio bus, mouse sensitivity and quit. Settings are saved
-## to user://settings.cfg by the Settings autoload.
+## Pause menu (Esc): resume, volume per audio bus, mouse sensitivity, starting a new game and
+## quitting (which saves). Settings are saved to user://settings.cfg by the Settings autoload.
 
 var _panel: PanelContainer
+var _new_game: Button
+var _confirm_new_game := false
 
 
 func _ready() -> void:
@@ -23,6 +25,8 @@ func open() -> void:
 	GameState.claim_ui(&"paused")
 	get_tree().paused = true
 	_panel.visible = true
+	_confirm_new_game = false
+	_new_game.text = "NEW GAME"
 
 
 func close() -> void:
@@ -46,8 +50,8 @@ func _build() -> void:
 	_panel.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
 	_panel.offset_left = -260
 	_panel.offset_right = 260
-	_panel.offset_top = -250
-	_panel.offset_bottom = 250
+	_panel.offset_top = -280
+	_panel.offset_bottom = 280
 	var column := VBoxContainer.new()
 	column.add_theme_constant_override("separation", 10)
 	_panel.add_child(column)
@@ -60,11 +64,35 @@ func _build() -> void:
 	UiStyle.style_button(resume, Palette.LIME, 18)
 	resume.pressed.connect(close)
 	column.add_child(resume)
+	_new_game = Button.new()
+	_new_game.text = "NEW GAME"
+	UiStyle.style_button(_new_game, Palette.AMBER, 18)
+	_new_game.pressed.connect(_on_new_game)
+	column.add_child(_new_game)
 	var quit := Button.new()
-	quit.text = "QUIT TO DESKTOP"
+	quit.text = "SAVE & QUIT TO DESKTOP"
 	UiStyle.style_button(quit, Palette.PINK, 18)
-	quit.pressed.connect(func() -> void: get_tree().quit())
+	quit.pressed.connect(_on_quit)
 	column.add_child(quit)
+
+
+func _on_quit() -> void:
+	SaveGame.save_game()
+	get_tree().quit()
+
+
+## Asks once ("click again"), then wipes the save and starts over in the noodle bar.
+func _on_new_game() -> void:
+	if not _confirm_new_game:
+		_confirm_new_game = true
+		_new_game.text = "CLICK AGAIN: ERASE SAVE AND START OVER"
+		return
+	SaveGame.delete_save()
+	GameState.start_new_game()
+	_panel.visible = false
+	get_tree().paused = false
+	GameState.release_ui()
+	get_tree().reload_current_scene()
 
 
 func _slider(parent: Control, title: String, low: float, high: float, value: float, on_change: Callable) -> void:

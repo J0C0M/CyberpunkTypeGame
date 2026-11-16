@@ -43,6 +43,7 @@ func _ready() -> void:
 	killable = not is_guide
 	model.look_seed = look_seed
 	add_to_group("merchants")
+	add_to_group("saveable")
 	super()
 	_home = transform
 	_interact = Interactable.create(self, Vector3(1.6, 1.1, 2.0), Vector3(0, 1.5, -0.9), "")
@@ -78,24 +79,24 @@ func _process(delta: float) -> void:
 func restock() -> void:
 	var profile := ShopCatalog.profile(catalog)
 	stock.clear()
-	for id in profile["stock"]:
-		stock.add(id, profile["stock"][id])
-	cash = profile["credits"]
+	for id in profile.stock:
+		stock.add(id, profile.stock[id])
+	cash = profile.credits
 
 
 ## What the merchant asks for one pack of `id` (markup, mood and reputation included).
 func sell_price(id: StringName) -> int:
 	var profile := ShopCatalog.profile(catalog)
 	var mood := 1.0 + (0.25 if anger_time > 0.0 else 0.0) + (0.15 if annoyed_time > 0.0 else 0.0)
-	var price := ItemDB.base_price(id) * ItemDB.pack_size(id) * float(profile["markup"]) * mood * (1.0 - 0.12 * reputation())
+	var price := ItemDB.base_price(id) * ItemDB.pack_size(id) * profile.markup * mood * (1.0 - 0.12 * reputation())
 	return maxi(1, roundi(price))
 
 
 ## What the merchant pays for one pack of `id`. Items they don't deal in fetch half as much.
 func buy_price(id: StringName) -> int:
 	var profile := ShopCatalog.profile(catalog)
-	var rate: float = profile["buyback"]
-	if not (profile["likes"] as Array).has(ItemDB.category(id)):
+	var rate := profile.buyback
+	if not profile.likes.has(ItemDB.category(id)):
 		rate *= 0.5
 	var mood := 0.8 if anger_time > 0.0 else 1.0
 	var price := ItemDB.base_price(id) * ItemDB.pack_size(id) * rate * mood * (1.0 + 0.12 * reputation())
@@ -162,6 +163,8 @@ func sell_to_player(id: StringName, price: int) -> String:
 		return "Sold out."
 	if GameState.credits < price:
 		return "You're short. That's %d ¢." % price
+	if GameState.inventory.room_for(id) < pack:
+		return "Your pockets are full. Sell something first."
 	GameState.spend_credits(price)
 	cash += price
 	stock.remove(id, pack)
@@ -205,6 +208,45 @@ func revive() -> void:
 	panic_time = 0.0
 	patience = MAX_PATIENCE
 	restock()
+
+
+func save_key() -> String:
+	return "merchant:" + String(merchant_id)
+
+
+func save_data() -> Dictionary:
+	return {
+		"cash": cash,
+		"stock": stock.to_dict(),
+		"anger": anger_time,
+		"annoyed": annoyed_time,
+		"refuse": refuse_time,
+		"patience": patience,
+		"dead": is_dead,
+	}
+
+
+func load_data(data: Dictionary) -> void:
+	cash = int(data.get("cash", cash))
+	stock.load_dict(data.get("stock", stock.to_dict()))
+	anger_time = float(data.get("anger", 0.0))
+	annoyed_time = float(data.get("annoyed", 0.0))
+	refuse_time = float(data.get("refuse", 0.0))
+	patience = int(data.get("patience", MAX_PATIENCE))
+	if data.get("dead", false) and not is_dead:
+		_vanish()
+
+
+## Gone until the next night (loading a save where this merchant had been killed).
+func _vanish() -> void:
+	is_dead = true
+	health.is_dead = true
+	health.health = 0.0
+	collision_layer = 0
+	_head.collision_layer = 0
+	_interact.enabled = false
+	visible = false
+	set_process(false)
 
 
 func can_trade() -> bool:
@@ -273,11 +315,31 @@ func handle_dialogue(action: String) -> void:
 		GameState.add_credits(150)
 		GameState.change_reputation(merchant_id, 0.2)
 		get_tree().call_group("hud", "show_message", "+150 ¢")
+	elif action == "give_key":
+		for id: StringName in [&"keycard_1107", &"ren_coupon"]:
+			if GameState.inventory.count(id) == 0 and GameState.inventory.add(id, 1) > 0:
+				get_tree().call_group("hud", "notify_item", "+ " + ItemDB.display_name(id), ItemDB.color(id))
+	elif action == "redeem_coupon":
+		# The coupon's slot frees up first, so the bowl always fits.
+		if GameState.inventory.remove(&"ren_coupon", 1):
+			GameState.inventory.add(&"noodles", 1)
+			get_tree().call_group("hud", "notify_item", "+ " + ItemDB.display_name(&"noodles"), ItemDB.color(&"noodles"))
 	elif action.begins_with("waypoint:"):
 		var place := StringName(action.trim_prefix("waypoint:"))
 		if GameState.places.has(place):
 			GameState.set_waypoint(place)
 			get_tree().call_group("hud", "show_message", "Marked: " + GameState.places[place]["label"])
+
+
+## Conditions on dialogue choices: "has:<item id>", "flag:<flag>" or "!flag:<flag>".
+func dialogue_condition(condition: String) -> bool:
+	if condition.begins_with("has:"):
+		return GameState.inventory.count(StringName(condition.trim_prefix("has:"))) > 0
+	if condition.begins_with("!flag:"):
+		return not GameState.flags.get(condition.trim_prefix("!flag:"), false)
+	if condition.begins_with("flag:"):
+		return GameState.flags.get(condition.trim_prefix("flag:"), false)
+	return true
 
 
 ## Shows a line of speech as a HUD message.

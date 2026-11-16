@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Script" path="res://scripts/items/item_data.gd" id="1_item"]
+
+[resource]
+script = ExtResource("1_item")
+id = &"gold_lighter"
+display_name = "Gold-Plated Lighter"
+category = &"valuable"
+price = 110
+pack = 1
+stack_size = 5
+description = "Engraved initials, not yours."
+inspect_text = "The initials read K.T. The flint still sparks."
+model = &"lighter"

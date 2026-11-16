@@ -2,8 +2,9 @@
 class_name Door
 extends Node3D
 ## Sliding apartment door with a frame and a number plate. Locked doors just rattle ("[E] Locked");
-## unlocked ones slide into the wall and back when used. The door faces local +Z (the hallway)
-## and slides along local X.
+## unlocked ones slide into the wall and back when used. A door with a `key_item` only opens from
+## the hallway for someone carrying that item (always from inside). Local +Z points into the
+## apartment, -Z out to the hallway; the door slides along local X.
 
 const LOCKED_SOUND := preload("res://assets/audio/ui_deny.wav")
 const SLIDE_SOUND := preload("res://assets/audio/door_slide.wav")
@@ -11,6 +12,8 @@ const SIZE := Vector3(1.05, 2.15, 0.08)
 
 @export var number := "1101"
 @export var locked := true
+## Inventory item needed to open the door from the hallway side (&"" = none).
+@export var key_item := &""
 @export var accent := Color(0.62, 0.28, 1.0)
 
 var is_open := false
@@ -43,7 +46,8 @@ func _ready() -> void:
 	_collider = BuildKit.box_collider_at(body, SIZE, Vector3(0, SIZE.y * 0.5, 0))
 	if Engine.is_editor_hint():
 		return
-	var area := Interactable.create(root, Vector3(SIZE.x, 1.2, 0.5), Vector3(0, 1.3, 0.2), "")
+	# Deeper than the panel on both sides, so the ray finds it before the panel from either side.
+	var area := Interactable.create(root, Vector3(SIZE.x, 1.2, 0.5), Vector3(0, 1.3, 0.0), "")
 	area.prompt_source = _prompt
 	area.interacted.connect(_on_used)
 
@@ -51,15 +55,30 @@ func _ready() -> void:
 func _prompt() -> String:
 	if locked:
 		return "Locked"
-	return "Close" if is_open else "Open"
+	if is_open:
+		return "Close"
+	if key_item != &"" and _from_hallway():
+		return "Open (%s)" % ItemDB.display_name(key_item) if _has_key() else "Locked (needs %s)" % ItemDB.display_name(key_item)
+	return "Open"
 
 
 func _on_used(_player: Player) -> void:
-	if locked:
+	if locked or (not is_open and key_item != &"" and _from_hallway() and not _has_key()):
 		SfxPool.play_at(self, LOCKED_SOUND, global_position + Vector3.UP, -4.0, 0.05, 3.0)
-		get_tree().call_group("hud", "show_message", "It's locked.", 1.5)
+		var line := "It's locked." if locked else "Locked. You need your %s. Ren might know where it is." % ItemDB.display_name(key_item)
+		get_tree().call_group("hud", "show_message", line, 2.5)
 		return
 	set_open(not is_open)
+
+
+func _has_key() -> bool:
+	return GameState.inventory.count(key_item) > 0
+
+
+## Whether the player stands on the hallway side (local -Z).
+func _from_hallway() -> bool:
+	var player := get_tree().get_first_node_in_group("player") as Node3D
+	return player == null or to_local(player.global_position).z < 0.0
 
 
 func set_open(open: bool) -> void:

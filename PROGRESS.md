@@ -7,7 +7,7 @@ Living status file so work can be picked up in a new session. Updated with every
 - `Development`: prototypes 1 and 2 merged.
 - `Build-Second-Prototype`: prototype 2 (merged into `Development`).
 - `Build-Third-Prototype`: prototype 3 = finishing prototype 2 + Part 1 (music); merged into `Development`.
-- Next: `Build-Fourth-Prototype` (see HANDOFF.md).
+- `Build-Fourth-Prototype`: prototype 4 (in progress, see below).
 
 Commits are authored as J0C0M via one-off `git -c user.name=... -c user.email=...` flags
 (git config itself is empty on this machine). Godot 4.7.2 binary: `~/Downloads/Godot_v4.7.2-stable_linux.x86_64`.
@@ -34,7 +34,31 @@ Ren the guide with dialogue and waypoints, reworked footsteps, Neo-Heights lobby
     muffled outside / clear inside; zones in every shop, cafe, lobby, elevator cab, hallway (quiet),
     apartment radio (fades while the TV is on).
   - `Settings` autoload + `ui/pause_menu.gd` (Esc): bus volumes, mouse sensitivity, saved to user://settings.cfg.
-## Prototype 4: not started (brief in HANDOFF.md)
-- Part A: inventory screen, item resources, hotbar, pickups, save system
-- Part B: combat (enemies, player health, more weapons)
-- Part C: bug hunt, screenshot tour, BUGFIX_NOTES.md
+## Prototype 4 (branch `Build-Fourth-Prototype`): in progress
+User's combat direction (asked at the start): **street gang + police drones**, **forgiving** difficulty,
+**pistol + shotgun** next to the KS-47.
+
+- Part A: inventory + save system: **done**
+  - Items are `ItemData` resources in `assets/items/<id>.tres` (loaded by `ItemDB`, same static API as before);
+    shop stock profiles are `ShopProfile` resources in `assets/shops/<id>.tres` (loaded by `ShopCatalog`).
+  - `Inventory`: stacks per `stack_size`, 30 slots for the player (`room_for`, `stacks`, `to_dict/load_dict`).
+  - `ItemModels` builds a low-poly model per item (`model` field); `ItemIcons` renders them all once into icons
+    (headless: placeholder squares). Pickups show the real model.
+  - Inventory screen (`ui/inventory_screen.gd`, Tab or I): category tabs, 6x5 grid (`ui/item_slot.gd`), detail
+    panel, use/eat/drink, drop one/stack, inspect (rotating 3D view), hotbar slot buttons. Pauses the game.
+  - Effects from food/drinks/stims in `GameState.effects` (sprint, steady, tipsy, regen); HUD shows them.
+  - Weapons: `Rifle` became the generic `Firearm` (`scripts/weapons/firearm.gd`); `WeaponHolder` keeps a 3-slot
+    hotbar (keys 1-3, mouse wheel) synced to weapon items (`ItemData.weapon_scene`).
+  - HUD: hotbar strip, item feed ("+ Synth-Soda"), effects line, weapon name follows the gun in hand.
+  - Key items: key card 1107 (needed from the hallway side of the 1107 door) and Ren's noodle coupon, both
+    given by Ren at the first meeting; the coupon is redeemed through a conditional dialogue choice ("if").
+  - `ItemScatter` (in world.tscn): 10 items around the city, back every night.
+  - Save system: `SaveGame` autoload, JSON in `user://savegame.json`; GameState + player + "saveable" group
+    (merchants, apartment fridge, item scatter). Saves on sleeping and on quit (pause menu or window close);
+    Main loads on start (not in screenshot mode). Pause menu has NEW GAME (click twice).
+  - Tests: `tests/test_inventory.tscn`, `tests/test_save.tscn` (headless), `tests/shot_ui.tscn` and
+    `tests/shot_pickups.tscn` (windowed screenshots, `-- --out=<prefix>`). New class_names need one
+    `--import` run before tests can see them.
+- Part B: combat (enemies, player health, more weapons): not started
+- Part C: bug hunt, screenshot tour, BUGFIX_NOTES.md: not started
+  - Noted for Part C: door number plates (Label3D) face into the apartments (local +Z), check from the hallway.
