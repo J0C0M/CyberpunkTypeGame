@@ -39,9 +39,9 @@ static func render(host: Node, data: CharacterData, size := 64) -> Image:
 	var eye := model.eye_height()
 	var camera := Camera3D.new()
 	camera.fov = 28.0
-	viewport.add_child(camera)
+	# Level with the eyes, looking straight ahead (-Z) at the face.
 	camera.position = Vector3(0.0, eye - 0.02, 0.95)
-	camera.look_at(Vector3(0.0, eye - 0.07, 0.0), Vector3.UP)
+	viewport.add_child(camera)
 	host.add_child(viewport)
 	await RenderingServer.frame_post_draw
 	await RenderingServer.frame_post_draw
