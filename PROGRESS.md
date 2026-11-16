@@ -161,7 +161,9 @@ first person, paper doll, mirrors, small extras, p6 prep.
     points; drawn 1.25x like most shooters. Gun view models lost their baked gloves and sleeves.
   - `ShadowLights` (world.tscn): every 0.5 s the 3 nearest bright lights get shadows.
   - Shots: `tests/shot_firstperson.tscn`; checks in `tests/test_world.tscn`.
-- [ ] Step 5: inventory paper doll
+- [x] Step 5: inventory paper doll: `ui/inventory_screen.gd` `_build_doll()` (SubViewport, own world, neon
+  rim lights, stage, half resolution), the character in its outfit with the gun in hand, drag to turn,
+  WORN list. Prototype 6 equips clothes here.
 - [ ] Step 6: mirrors
 - [ ] Step 7: photo booth, third person, lobby monitor, NPC comments
 - [ ] Step 8: prototype 6 preparation, docs, merge
