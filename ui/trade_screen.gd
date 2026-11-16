@@ -39,6 +39,7 @@ func _ready() -> void:
 	layer = 10
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	_audio = AudioStreamPlayer.new()
+	_audio.bus = &"UI"
 	add_child(_audio)
 	_build()
 	_panel.visible = false

@@ -20,6 +20,7 @@ func _ready() -> void:
 	for i in voices:
 		var player := AudioStreamPlayer3D.new()
 		player.max_distance = 140.0
+		player.bus = &"SFX"
 		add_child(player)
 		_players.append(player)
 

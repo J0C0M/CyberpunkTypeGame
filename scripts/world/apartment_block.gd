@@ -67,6 +67,7 @@ func _ready() -> void:
 	if not Engine.is_editor_hint():
 		GameState.register_place(&"apartment", "Neo-Heights 1107", global_transform * Vector3(0, 0, 2.0))
 		GameState.night_passed.connect(func() -> void: _fridge_stocked = true)
+		_add_music_zones()
 
 
 func _half() -> float:
@@ -155,6 +156,7 @@ func _build_lobby() -> void:
 		buzz.max_distance = 14.0
 		buzz.volume_db = -10.0
 		buzz.autoplay = true
+		buzz.bus = &"Ambience"
 		_root.add_child(buzz)
 	# Benches, a plant and the doorman's desk.
 	var bench := Vector3(-half + 2.2, FLOOR_Y, -8.6)
@@ -286,6 +288,7 @@ func _build_cab(level: int) -> void:
 		_hum = AudioStreamPlayer3D.new()
 		_hum.stream = HUM
 		_hum.unit_size = 3.0
+		_hum.bus = &"SFX"
 		_root.add_child(_hum)
 
 
@@ -621,3 +624,13 @@ func _take_soda(_player: Player) -> void:
 	_fridge_stocked = false
 	GameState.inventory.add(&"synth_soda", 1)
 	get_tree().call_group("hud", "show_message", "+ Synth-Soda", 2.0)
+
+
+## Elevator music in the lobby and both cabs, a quiet hallway and a radio in the apartment.
+func _add_music_zones() -> void:
+	var muzak := preload("res://assets/music/elevator.ogg")
+	var half := _half()
+	MusicZone.create(_root, Vector3(width - 0.6, LOBBY_HEIGHT, -HALL_BACK_Z + CAB_DEPTH), Vector3(0, LOBBY_HEIGHT * 0.5, (HALL_BACK_Z - CAB_DEPTH) * 0.5), muzak, Vector3(0, LOBBY_HEIGHT - 0.3, -5.0), -9.0)
+	MusicZone.create(_root, Vector3(CAB_HALF * 2.0, 2.5, CAB_DEPTH), Vector3(SHAFT_X, UPPER_Y + 1.25, HALL_BACK_Z - CAB_DEPTH * 0.5), muzak, Vector3(SHAFT_X, UPPER_Y + 2.3, HALL_BACK_Z - CAB_DEPTH * 0.5), -10.0)
+	MusicZone.create(_root, Vector3(width - 0.6, UPPER_HEIGHT, HALL_FRONT_Z - HALL_BACK_Z), Vector3(0, UPPER_Y + UPPER_HEIGHT * 0.5, (HALL_FRONT_Z + HALL_BACK_Z) * 0.5), null, Vector3.ZERO)
+	MusicZone.create(_root, Vector3(half - 0.3 - APARTMENT_X, UPPER_HEIGHT, -HALL_FRONT_Z - 0.3), Vector3((APARTMENT_X + half - 0.3) * 0.5, UPPER_Y + UPPER_HEIGHT * 0.5, HALL_FRONT_Z * 0.5), preload("res://assets/music/apartment_radio.ogg"), Vector3(3.4, UPPER_Y + 0.95, HALL_FRONT_Z + 0.55), -12.0)

@@ -20,6 +20,7 @@ greeting = "Fresh off the belt."
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 4, 0.6)
 stream = ExtResource("2_buzz")
 volume_db = -14.0
+bus = &"Ambience"
 unit_size = 2.5
 max_distance = 18.0
 autoplay = true

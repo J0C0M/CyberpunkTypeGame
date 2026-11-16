@@ -7,6 +7,7 @@
 [ext_resource type="PackedScene" path="res://ui/hud.tscn" id="5_hud"]
 [ext_resource type="PackedScene" path="res://ui/trade_screen.tscn" id="6_trade"]
 [ext_resource type="PackedScene" path="res://ui/dialogue_screen.tscn" id="7_dialogue"]
+[ext_resource type="PackedScene" path="res://ui/pause_menu.tscn" id="8_pause"]
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_post"]
 shader = ExtResource("3_post")
@@ -39,3 +40,5 @@ render_target_update_mode = 4
 [node name="TradeScreen" parent="." instance=ExtResource("6_trade")]
 
 [node name="DialogueScreen" parent="." instance=ExtResource("7_dialogue")]
+
+[node name="PauseMenu" parent="." instance=ExtResource("8_pause")]

@@ -96,6 +96,7 @@ func _ready() -> void:
 	_fire_sound.unit_size = 5.0
 	_fire_sound.max_distance = 40.0
 	_fire_sound.volume_db = -6.0
+	_fire_sound.bus = &"Ambience"
 	_fire_sound.position = Vector3(1.4, 1.0, 0)
 	add_child(_fire_sound)
 

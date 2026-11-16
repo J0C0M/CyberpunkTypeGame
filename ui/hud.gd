@@ -3,7 +3,7 @@ extends CanvasLayer
 ## hint that fades out, short messages (call_group("hud", "show_message", text)) and a
 ## "click to play" overlay while the mouse is free.
 
-const HINT_TEXT := "WASD move   SHIFT sprint   SPACE jump   LMB fire   R reload   E interact\nESC free mouse   F2 vertex wobble   F3 retro filter"
+const HINT_TEXT := "WASD move   SHIFT sprint   SPACE jump   LMB fire   R reload   E interact\nESC pause/settings   F2 vertex wobble   F3 retro filter"
 const HINT_DURATION := 12.0
 
 var _rifle: Rifle

@@ -60,6 +60,7 @@ func _ready() -> void:
 	_audio.unit_size = 3.0
 	_audio.max_distance = 20.0
 	_audio.volume_db = -8.0
+	_audio.bus = &"SFX"
 	add_child(_audio)
 	_glow = BuildKit.omni(self, Vector3(0, 0, 0.8), Palette.CYAN, 0.0, 5.0)
 	_glow.visible = false

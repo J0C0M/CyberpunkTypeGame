@@ -24,6 +24,7 @@ func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	_audio = AudioStreamPlayer.new()
 	_audio.stream = CLICK_SOUND
+	_audio.bus = &"UI"
 	add_child(_audio)
 	_build()
 	_panel.visible = false

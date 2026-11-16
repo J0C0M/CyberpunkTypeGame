@@ -23,7 +23,7 @@ func _input(event: InputEvent) -> void:
 		get_tree().call_group("player", "look", (event as InputEventMouseMotion).relative)
 		get_viewport().set_input_as_handled()
 	elif event.is_action_pressed("toggle_mouse_capture"):
-		set_mouse_captured(Input.mouse_mode != Input.MOUSE_MODE_CAPTURED)
+		get_tree().call_group("pause_menu", "open")
 		get_viewport().set_input_as_handled()
 	elif event is InputEventMouseButton and event.pressed and Input.mouse_mode != Input.MOUSE_MODE_CAPTURED:
 		# The click that grabs the mouse must not also fire the gun.
