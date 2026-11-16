@@ -19,6 +19,7 @@ var _message_time := 0.0
 var _overlay: Control
 var _prompt: Label
 var _credits: Label
+var _waypoint: WaypointMarker
 var _player: Player
 var _elapsed := 0.0
 
@@ -36,10 +37,16 @@ func _ready() -> void:
 	_build_crosshair(root)
 	_build_ammo_panel(root)
 	_build_texts(root)
+	_waypoint = WaypointMarker.new()
+	_waypoint.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	root.add_child(_waypoint)
+	_waypoint.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_build_overlay(root)
 
 	var player := get_tree().get_first_node_in_group("player") as Player
 	_player = player
+	if player:
+		_waypoint.camera = player.camera
 	if player and player.weapon:
 		_rifle = player.weapon
 		_rifle.ammo_changed.connect(_on_ammo_changed)
@@ -51,6 +58,10 @@ func _ready() -> void:
 
 func _process(delta: float) -> void:
 	_elapsed += delta
+	var screen := get_parent().get_node_or_null("RetroScreen") as SubViewportContainer
+	if screen:
+		var viewport := screen.get_child(0) as SubViewport
+		_waypoint.viewport_scale = screen.size / Vector2(viewport.size)
 	if _rifle:
 		_crosshair.spread = _rifle.get_spread()
 		if _rifle.is_reloading:

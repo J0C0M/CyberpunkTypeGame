@@ -17,6 +17,8 @@ var reputation := {}
 var places := {}
 ## Current HUD waypoint (an entry of `places`), or empty.
 var waypoint := {}
+## Story flags ("met_guide"...).
+var flags := {}
 
 ## Empty while the player walks around; otherwise the name of whatever has taken over input
 ## ("trade", "dialogue", "seated"...). Main stops toggling the mouse and the player stops

@@ -245,11 +245,38 @@ func _prompt() -> String:
 
 
 func _on_interacted(_player: Player) -> void:
-	if not is_guide and not can_trade():
+	if is_guide:
+		var start := &"hub" if GameState.flags.get("met_guide", false) else &"first"
+		if anger_time > 0.0 or is_panicking():
+			start = &"upset"
+		get_tree().call_group("dialogue_screen", "open_dialogue", display_name, GuideDialogue.build(), start, self)
+		return
+	if not can_trade():
 		say(refusal_line())
 		return
+	_open_trade()
+
+
+func _open_trade() -> void:
 	trade_requested.emit(self)
 	get_tree().call_group("trade_screen", "open_for", self)
+
+
+## Runs an action from a dialogue tree ("trade", "first_meeting", "waypoint:<place id>").
+func handle_dialogue(action: String) -> void:
+	if action == "trade":
+		get_tree().call_group("dialogue_screen", "close")
+		_open_trade.call_deferred()
+	elif action == "first_meeting":
+		GameState.flags["met_guide"] = true
+		GameState.add_credits(150)
+		GameState.change_reputation(merchant_id, 0.2)
+		get_tree().call_group("hud", "show_message", "+150 ¢")
+	elif action.begins_with("waypoint:"):
+		var place := StringName(action.trim_prefix("waypoint:"))
+		if GameState.places.has(place):
+			GameState.set_waypoint(place)
+			get_tree().call_group("hud", "show_message", "Marked: " + GameState.places[place]["label"])
 
 
 ## Shows a line of speech as a HUD message.
