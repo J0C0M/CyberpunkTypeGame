@@ -124,7 +124,13 @@ first person, paper doll, mirrors, small extras, p6 prep.
   - 15 clothing items (`assets/items/wear_*.tres`, category "clothing", `wear_slot`/`wear_layer`),
     CLOTHING tab in the inventory.
   - Tests: `tests/test_character.tscn` (headless), `tests/shot_character.tscn` (lineup screenshots).
-- [ ] Step 2: character creator
+- [x] Step 2: character creator (`scenes/character_creator.tscn`, `ui/character_creator.gd`,
+  `scripts/world/body_shop.gd`): neon clinic room with a turntable, retro-filtered 3D + sharp UI, tabs
+  Identity/Face/Hair/Body/Tattoos/Outfit, selectors/swatches/sliders (controller focusable, LB/RB tabs,
+  right stick turns/zooms), drag/wheel/F/B/Q/E/U, underwear preview, Randomize/Reset/Back/Confirm.
+  Confirm -> `SaveGame.start_new_character()` (starts main.tscn). Menu music `assets/music/menu.ogg`
+  (`Music.play_menu()`; `python3 tools/generate_music.py menu` regenerates one track).
+  `GameState.character` (CharacterData) and `GameState.play_seconds`. Screenshots: `tests/shot_creator.tscn`.
 - [ ] Step 3: main menu, settings, save slots
 - [ ] Step 4: first-person arms, body, shadow
 - [ ] Step 5: inventory paper doll

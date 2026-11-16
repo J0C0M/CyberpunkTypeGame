@@ -10,6 +10,8 @@ signal saved
 signal loaded
 
 const VERSION := 1
+const MENU_SCENE := "res://scenes/main_menu.tscn"
+const GAME_SCENE := "res://scenes/main.tscn"
 
 var path := "user://savegame.json"
 ## Main turns this off for screenshot tours, so they never touch the player's save.
@@ -23,6 +25,16 @@ func has_save() -> bool:
 func delete_save() -> void:
 	if has_save():
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
+
+
+## New Game: starts the city as a freshly created character (from the creator).
+func start_new_character(data: CharacterData) -> void:
+	data.character_id = CharacterData.new_id(data.character_name)
+	GameState.character = data
+	GameState.start_new_game()
+	GameState.release_ui()
+	Music.play_menu(false)
+	get_tree().change_scene_to_file(GAME_SCENE)
 
 
 ## Writes the current game to disk. Returns false if saving is off or the file can't be written.

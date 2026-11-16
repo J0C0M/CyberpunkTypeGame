@@ -42,6 +42,10 @@ var clock_minutes := START_CLOCK
 var effects := {}
 ## Police wanted stars (0-5), kept up to date by PoliceDispatch.
 var wanted := 0
+## Who the player is (look, name, outfit); set by the creator or loaded with a save slot.
+var character := CharacterData.new()
+## Seconds played with this character (shown on save slots).
+var play_seconds := 0.0
 
 ## Empty while the player walks around; otherwise the name of whatever has taken over input
 ## ("trade", "dialogue", "seated"...). Main stops toggling the mouse and the player stops
@@ -66,14 +70,20 @@ func start_new_game() -> void:
 	clear_waypoint()
 	clock_minutes = START_CLOCK
 	clock_changed.emit(clock_text())
+	play_seconds = 0.0
+	wanted = 0
 
 
 func _give_starting_kit() -> void:
 	inventory.add(&"weapon_ks47", 1)
 	inventory.add(&"ammo_ks47", STARTING_AMMO)
+	for item in Outfits.items(character.outfit):
+		inventory.add(item, 1)
 
 
 func _process(delta: float) -> void:
+	if ui_mode != &"menu":
+		play_seconds += delta
 	var before := int(clock_minutes)
 	clock_minutes = fposmod(clock_minutes + delta * CLOCK_RATE, 1440.0)
 	if int(clock_minutes) != before:
