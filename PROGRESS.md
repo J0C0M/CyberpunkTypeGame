@@ -91,5 +91,11 @@ User's combat direction (asked at the start): **street gang + police drones**, *
     "Who are the Rust Jackals?" topic. Test: `tests/test_police.tscn`; shots: `tests/shot_police.tscn`.
   - [x] B5 Balance (forgiving: ~5 HP/s from all four Jackals in the open, ~3 HP/s from two drones, 5 s
     regen delay), README controls/features/tests, CREDITS.
-- Part C: bug hunt, screenshot tour, BUGFIX_NOTES.md: not started
-  - Noted for Part C: door number plates (Label3D) face into the apartments (local +Z), check from the hallway.
+- Part C: bug hunt (BUGFIX_NOTES.md): **in progress**
+  - [x] Errors/warnings: exit leaks (audio) fixed via `SaveGame.quit_game()`; stale deferred ammo signal.
+  - [x] Screenshot tour `-- --tour=<prefix>` (`scripts/debug/screenshot_tour.gd`), 27 viewpoints; fixed door
+    orientation, sign poles through text, dark lobby/hallway/cyberware/gun shop, stale prompts.
+  - [x] Pedestrians: props cut out of their navmesh + unstick (`tests/test_crowd.tscn`: 14.8 % -> <1 % stuck).
+  - [x] Explosions blocked by walls; seated look-around; flatline while seated / in the elevator.
+  - [ ] Performance (explosion + panic, combat with enemies and drones), UI at other resolutions,
+    remaining gameplay checks, final re-tour.

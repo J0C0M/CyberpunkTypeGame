@@ -92,7 +92,7 @@ func _wall_color() -> Color:
 		Style.CLINIC:
 			return Color(0.55, 0.62, 0.66)
 		Style.CYBERWARE:
-			return Color(0.1, 0.11, 0.15)
+			return Color(0.16, 0.17, 0.22)
 		Style.GUNS:
 			return Color(0.36, 0.33, 0.3)
 		Style.BAR:
@@ -247,6 +247,8 @@ func _decor_cyberware() -> void:
 	_geo.add_box_at(Vector3(0.12, 0.12, 0.12), base + Vector3(1.2, 0.4, 0.4), MatLib.neon(Palette.CYAN, 4.0))
 	for x: float in [1.0, 2.4]:
 		_geo.add_quad(Vector2(1.2, 1.6), Transform3D(Basis.IDENTITY, Vector3(x, 2.6, -DEPTH + 0.02)), MatLib.holo_ad(Palette.PURPLE, Palette.CYAN, _rng.randi() % 4, _rng.randf() * 10.0, 2.0))
+	# Cold surgical light over the shop floor; the dark walls swallowed the rest.
+	BuildKit.omni(_root, Vector3(0, HEIGHT - 0.5, -2.8), Palette.COOL_WHITE.lerp(Palette.PURPLE, 0.25), 1.8, 9.0)
 
 
 func _decor_clinic() -> void:
@@ -282,6 +284,8 @@ func _decor_guns() -> void:
 	_geo.add_bar(Vector3(-_half() + 0.2, 3.5, -DEPTH + 0.1), Vector3(_half() - 0.2, 3.5, -DEPTH + 0.1), 0.05, MatLib.neon(Palette.RED, 3.5))
 	_geo.add_bar(Vector3(-_half() + 0.2, HEIGHT - 0.1, -DEPTH + 0.8), Vector3(_half() - 0.2, HEIGHT - 0.1, -DEPTH + 0.8), 0.08, MatLib.neon(Palette.WARM_WHITE, 3.0))
 	BuildKit.omni(_root, Vector3(0, HEIGHT - 0.6, -DEPTH + 1.2), Palette.WARM_WHITE, 1.8, 6.0)
+	# A plain work light by the door, so the customer side isn't all red.
+	BuildKit.omni(_root, Vector3(0, HEIGHT - 0.5, -2.2), Palette.WARM_WHITE, 1.5, 8.0)
 	# Ammo crates stacked by the door.
 	var olive := MatLib.surface(Color(0.2, 0.24, 0.12), 0.7)
 	for i in 4:

@@ -72,10 +72,27 @@ func load_game() -> bool:
 	return true
 
 
+func _ready() -> void:
+	# Closing the window goes through quit_game() so the game saves and shuts down cleanly.
+	get_tree().set_auto_accept_quit(false)
+
+
 func _notification(what: int) -> void:
-	# Closing the window: keep the night's progress.
 	if what == NOTIFICATION_WM_CLOSE_REQUEST:
-		save_game()
+		quit_game()
+
+
+## Saves, silences every sound and quits a few frames later. Streams still playing at the moment
+## the engine shuts down would be reported as leaked; stopped ones are released on the next mix.
+func quit_game() -> void:
+	save_game()
+	for player in get_tree().root.find_children("*", "AudioStreamPlayer", true, false):
+		(player as AudioStreamPlayer).stop()
+	for player in get_tree().root.find_children("*", "AudioStreamPlayer3D", true, false):
+		(player as AudioStreamPlayer3D).stop()
+	for i in 6:
+		await get_tree().process_frame
+	get_tree().quit()
 
 
 ## Small helpers for storing vectors in JSON.

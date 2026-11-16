@@ -43,8 +43,8 @@ func _ready() -> void:
 			door = node.find_child("Door1107", true, false)
 	_check(door != null, "found door 1107")
 	if door:
-		var hallway := door.global_transform * Vector3(0, 0.1, -1.0)
-		var inside := door.global_transform * Vector3(0, 0.1, 1.0)
+		var hallway := door.global_transform * Vector3(0, 0.1, 1.0)
+		var inside := door.global_transform * Vector3(0, 0.1, -1.0)
 		player.global_position = inside
 		var inside_says_hallway: bool = door.call("_from_hallway")
 		player.global_position = hallway

@@ -146,7 +146,8 @@ func _process(delta: float) -> void:
 	var free_mouse := Input.mouse_mode != Input.MOUSE_MODE_CAPTURED and not get_tree().has_meta("screenshot_mode")
 	_overlay.visible = free_mouse and GameState.is_free_roaming()
 	_crosshair.visible = not free_mouse and GameState.is_free_roaming()
-	var focus := _player.focused_interactable if _player else null
+	# A player whose physics is paused (screenshot tours, tests) doesn't update its focus.
+	var focus := _player.focused_interactable if _player and _player.is_physics_processing() else null
 	_prompt.visible = focus != null and _crosshair.visible
 	if _prompt.visible:
 		_prompt.text = "[E] " + focus.get_prompt()

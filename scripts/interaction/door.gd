@@ -3,8 +3,8 @@ class_name Door
 extends Node3D
 ## Sliding apartment door with a frame and a number plate. Locked doors just rattle ("[E] Locked");
 ## unlocked ones slide into the wall and back when used. A door with a `key_item` only opens from
-## the hallway for someone carrying that item (always from inside). Local +Z points into the
-## apartment, -Z out to the hallway; the door slides along local X.
+## the hallway for someone carrying that item (always from inside). The door faces local +Z (the
+## hallway, where its number plate is) and slides along local X.
 
 const LOCKED_SOUND := preload("res://assets/audio/ui_deny.wav")
 const SLIDE_SOUND := preload("res://assets/audio/door_slide.wav")
@@ -75,10 +75,10 @@ func _has_key() -> bool:
 	return GameState.inventory.count(key_item) > 0
 
 
-## Whether the player stands on the hallway side (local -Z).
+## Whether the player stands on the hallway side (local +Z).
 func _from_hallway() -> bool:
 	var player := get_tree().get_first_node_in_group("player") as Node3D
-	return player == null or to_local(player.global_position).z < 0.0
+	return player == null or to_local(player.global_position).z > 0.0
 
 
 func set_open(open: bool) -> void:

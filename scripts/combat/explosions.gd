@@ -76,13 +76,18 @@ func _apply_damage(position: Vector3, radius: float, damage: float, source: Node
 	query.collision_mask = DAMAGE_MASK
 	query.exclude = exclude
 	var reached := {}
-	for result in get_world_3d().direct_space_state.intersect_shape(query, 96):
+	var space := get_world_3d().direct_space_state
+	for result in space.intersect_shape(query, 96):
 		var collider: Object = result["collider"]
 		var target := Damageable.find(collider)
 		if target == null or reached.has(target):
 			continue
-		reached[target] = true
 		var center := (collider as Node3D).global_position + Vector3.UP * 0.6
+		# Walls shield whatever is behind them (glass and props don't: they are on other layers).
+		var sight := PhysicsRayQueryParameters3D.create(position + Vector3.UP * 0.3, center, 1)
+		if not space.intersect_ray(sight).is_empty():
+			continue
+		reached[target] = true
 		var offset := center - position
 		var falloff := clampf(1.0 - offset.length() / radius, 0.2, 1.0)
 		var direction := offset.normalized() if offset.length_squared() > 0.01 else Vector3.UP

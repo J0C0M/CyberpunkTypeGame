@@ -47,6 +47,10 @@ var _tv: TvSet
 var _seated: Player
 var _seat_return := Transform3D.IDENTITY
 var _seat_lock := 0.0
+## The seated view and how far the player has looked around from it (yaw, pitch in radians).
+var _seat_view := Transform3D.IDENTITY
+var _seat_look := Vector2.ZERO
+var _seat_ready := false
 var _fridge_stocked := true
 
 
@@ -71,6 +75,7 @@ func _ready() -> void:
 		GameState.night_passed.connect(func() -> void: _fridge_stocked = true)
 		_add_music_zones()
 		add_to_group("saveable")
+		add_to_group("seat")
 
 
 func _half() -> float:
@@ -149,6 +154,8 @@ func _build_lobby() -> void:
 	BuildKit.omni(_root, Vector3(3.0, LOBBY_HEIGHT - 0.5, -3.0), ACCENT, 1.4, 9.0)
 	BuildKit.omni(_root, Vector3(SHAFT_X, LOBBY_HEIGHT - 0.5, HALL_BACK_Z + 2.0), Palette.WARM_WHITE, 1.6, 8.0)
 	BuildKit.omni(_root, Vector3(half - 2.6, LOBBY_HEIGHT - 0.5, -4.0), Palette.WARM_WHITE, 1.2, 7.0)
+	# General fill so the lobby reads as a lit room, not a cave.
+	BuildKit.omni(_root, Vector3(0.0, LOBBY_HEIGHT - 0.4, -5.0), Palette.COOL_WHITE, 1.4, 12.0)
 	for x: float in [-4.5, 0.0, 4.5]:
 		_geo.add_box_at(Vector3(1.6, 0.04, 0.3), Vector3(x, LOBBY_HEIGHT - 0.03, -1.5), MatLib.neon(Palette.WARM_WHITE, 2.5))
 	if not Engine.is_editor_hint():
@@ -304,8 +311,12 @@ func _ride(player: Player, from_level: int) -> void:
 	_hum.global_position = player.global_position
 	_hum.play()
 	await get_tree().create_timer(0.7).timeout
+	if _ride_interrupted(player):
+		return
 	var hud := get_tree().get_first_node_in_group("hud")
 	await hud.fade_to(1.0, 0.5).finished
+	if _ride_interrupted(player):
+		return
 	var rise := (UPPER_Y - FLOOR_Y) * (1.0 if from_level == 0 else -1.0)
 	player.global_position += global_basis.y * rise
 	player.velocity = Vector3.ZERO
@@ -314,7 +325,17 @@ func _ride(player: Player, from_level: int) -> void:
 	SfxPool.play_at(self, DING, player.global_position + Vector3.UP, -6.0, 0.0, 3.0)
 	await hud.fade_to(0.0, 0.5).finished
 	_riding = false
-	GameState.release_ui()
+	if GameState.ui_mode == &"elevator":
+		GameState.release_ui()
+
+
+## Something else took over mid-ride (the player flatlined): stop without touching input.
+func _ride_interrupted(player: Player) -> bool:
+	if player.is_dead or GameState.ui_mode != &"elevator":
+		_riding = false
+		_hum.stop()
+		return true
+	return false
 
 
 # --- 11th floor --------------------------------------------------------------------------------
@@ -398,8 +419,9 @@ func _build_hallway() -> void:
 	# Hallway end walls (the east one has the window built into the shell).
 	_geo.add_box_at(Vector3(0.05, UPPER_HEIGHT, hall_width), Vector3(-half + 0.33, UPPER_Y + UPPER_HEIGHT * 0.5, hall_center_z), lining)
 	# Doors: the player's apartment and the neighbours' (locked).
-	var doors := [[door_x, HALL_FRONT_Z, 0.0, "1107", false], [-1.2, HALL_FRONT_Z, 0.0, "1106", true], [-6.4, HALL_FRONT_Z, 0.0, "1105", true],
-		[-1.2, HALL_BACK_Z, PI, "1101", true], [1.9, HALL_BACK_Z, PI, "1102", true], [5.0, HALL_BACK_Z, PI, "1103", true]]
+	# A Door faces its local +Z, so front-wall doors turn round (PI) to show their numbers to the hallway.
+	var doors := [[door_x, HALL_FRONT_Z, PI, "1107", false], [-1.2, HALL_FRONT_Z, PI, "1106", true], [-6.4, HALL_FRONT_Z, PI, "1105", true],
+		[-1.2, HALL_BACK_Z, 0.0, "1101", true], [1.9, HALL_BACK_Z, 0.0, "1102", true], [5.0, HALL_BACK_Z, 0.0, "1103", true]]
 	for entry in doors:
 		var door := Door.new()
 		door.number = entry[3]
@@ -408,15 +430,17 @@ func _build_hallway() -> void:
 			door.key_item = &"keycard_1107"
 		door.accent = ACCENT
 		door.name = "Door" + entry[3]
-		door.position = Vector3(entry[0], UPPER_Y, entry[1] + (0.04 if entry[2] == PI else -0.04) * -1.0)
+		# Just proud of the wall, on the hallway side.
+		door.position = Vector3(entry[0], UPPER_Y, entry[1] + (-0.04 if entry[2] == PI else 0.04))
 		door.rotation.y = entry[2]
 		_root.add_child(door)
 	# Flickering strip lights and a little life on the walls.
 	for i in 4:
 		var x := -half + 2.5 + i * 4.0
 		_geo.add_box_at(Vector3(1.2, 0.04, 0.12), Vector3(x, UPPER_Y + UPPER_HEIGHT - 0.06, hall_center_z), MatLib.neon(Palette.COOL_WHITE, 3.0, 0.15 if i == 2 else 0.0, 0.0, float(i)))
-	BuildKit.omni(_root, Vector3(-3.0, UPPER_Y + UPPER_HEIGHT - 0.4, hall_center_z), Palette.COOL_WHITE, 1.0, 8.0)
-	BuildKit.omni(_root, Vector3(4.0, UPPER_Y + UPPER_HEIGHT - 0.4, hall_center_z), ACCENT, 0.9, 7.0)
+	BuildKit.omni(_root, Vector3(-6.0, UPPER_Y + UPPER_HEIGHT - 0.4, hall_center_z), Palette.COOL_WHITE, 1.5, 8.0)
+	BuildKit.omni(_root, Vector3(-1.0, UPPER_Y + UPPER_HEIGHT - 0.4, hall_center_z), Palette.COOL_WHITE, 1.5, 8.0)
+	BuildKit.omni(_root, Vector3(4.5, UPPER_Y + UPPER_HEIGHT - 0.4, hall_center_z), ACCENT, 1.4, 8.0)
 	BuildKit.neon_text(_root, "NO SMOKING  //  NO DRONES", Transform3D(Basis(Vector3.UP, PI), Vector3(-2.8, UPPER_Y + 2.4, HALL_FRONT_Z - 0.01)), Palette.RED, 0.12)
 
 
@@ -605,9 +629,39 @@ func _sit(player: Player) -> void:
 	player.weapon_holder.visible = false
 	var eye := to_global(Vector3(5.8, UPPER_Y + 1.15, -5.6))
 	var view := Transform3D(Basis.looking_at(_tv.global_position - eye, Vector3.UP), eye)
-	create_tween().tween_property(camera, "global_transform", view, 0.9).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	_seat_view = view
+	_seat_look = Vector2.ZERO
+	_seat_ready = false
+	if not player.died.is_connected(_on_seated_player_died):
+		player.died.connect(_on_seated_player_died)
+	var tween := create_tween()
+	tween.tween_property(camera, "global_transform", view, 0.9).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	tween.tween_callback(func() -> void: _seat_ready = true)
 	_tv.turn_on()
 	get_tree().call_group("hud", "show_message", "A / D  change channel     E / ESC  stand up", 4.0)
+
+
+## Mouse look while seated (routed by Main): a little turn of the head, not a free camera.
+func look_around(relative: Vector2) -> void:
+	if _seated == null or not _seat_ready:
+		return
+	var sensitivity := Settings.mouse_sensitivity
+	_seat_look.x = clampf(_seat_look.x - relative.x * sensitivity, -0.7, 0.7)
+	_seat_look.y = clampf(_seat_look.y - relative.y * sensitivity, -0.35, 0.3)
+	var basis := Basis(Vector3.UP, _seat_look.x) * _seat_view.basis * Basis(Vector3.RIGHT, _seat_look.y)
+	_seated.camera.global_transform = Transform3D(basis, _seat_view.origin)
+
+
+## Shot on the couch (it can happen): drop the seat at once so the flatline owns the camera.
+func _on_seated_player_died(_hit: HitInfo) -> void:
+	if _seated == null:
+		return
+	var player := _seated
+	_seated = null
+	_tv.turn_off()
+	player.camera.top_level = false
+	player.camera.transform = Transform3D.IDENTITY
+	player.weapon_holder.visible = true
 
 
 func _stand_up() -> void:

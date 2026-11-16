@@ -2,10 +2,13 @@ extends Node
 ## Game root. Owns mouse capture; the 3D world lives inside the low-res RetroScreen viewport.
 
 const ScreenshotRunner := preload("res://scripts/debug/screenshot_runner.gd")
+const ScreenshotTour := preload("res://scripts/debug/screenshot_tour.gd")
 
 
 func _ready() -> void:
 	var runner := ScreenshotRunner.from_cmdline()
+	if runner == null:
+		runner = ScreenshotTour.from_cmdline()
 	if runner:
 		get_tree().set_meta("screenshot_mode", true)
 		add_child(runner)
@@ -19,6 +22,11 @@ func _ready() -> void:
 
 
 func _input(event: InputEvent) -> void:
+	# On the couch the mouse turns the head a little.
+	if GameState.ui_mode == &"seated" and event is InputEventMouseMotion and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
+		get_tree().call_group("seat", "look_around", (event as InputEventMouseMotion).relative)
+		get_viewport().set_input_as_handled()
+		return
 	# Menus, dialogue and seats own the mouse and Esc while they are open.
 	if not GameState.is_free_roaming():
 		return

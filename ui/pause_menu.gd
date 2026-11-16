@@ -77,8 +77,7 @@ func _build() -> void:
 
 
 func _on_quit() -> void:
-	SaveGame.save_game()
-	get_tree().quit()
+	SaveGame.quit_game()
 
 
 ## Asks once ("click again"), then wipes the save and starts over in the noodle bar.
