@@ -179,7 +179,7 @@ func _on_health_changed(health: float, max_health: float) -> void:
 
 
 func _on_hurt(hit: HitInfo) -> void:
-	_hurt_flash = minf(1.0, _hurt_flash + 0.35 + hit.damage / 40.0)
+	_hurt_flash = minf(0.75, _hurt_flash + 0.25 + hit.damage / 40.0)
 	var from := hit.position - hit.direction * 5.0
 	if hit.source is Node3D and is_instance_valid(hit.source) and hit.source != _player:
 		from = (hit.source as Node3D).global_position
@@ -189,7 +189,7 @@ func _on_hurt(hit: HitInfo) -> void:
 
 ## Red edges after a hit, and a slow pulse while health is low.
 func _update_vignette(delta: float) -> void:
-	_hurt_flash = move_toward(_hurt_flash, 0.0, delta * 1.6)
+	_hurt_flash = move_toward(_hurt_flash, 0.0, delta * 2.0)
 	var low := 0.0
 	if _player and not _player.is_dead and _player.health.health < _player.health.max_health * 0.3:
 		low = 0.35 + 0.2 * sin(_elapsed * 5.0)
@@ -393,8 +393,8 @@ func _build_health(root: Control) -> void:
 func _build_damage_effects(root: Control) -> void:
 	var gradient := Gradient.new()
 	gradient.set_color(0, Color(0.8, 0.0, 0.08, 0.0))
-	gradient.set_color(1, Color(0.8, 0.0, 0.08, 0.85))
-	gradient.add_point(0.55, Color(0.8, 0.0, 0.08, 0.0))
+	gradient.set_color(1, Color(0.8, 0.0, 0.08, 0.6))
+	gradient.add_point(0.68, Color(0.8, 0.0, 0.08, 0.0))
 	var texture := GradientTexture2D.new()
 	texture.gradient = gradient
 	texture.fill = GradientTexture2D.FILL_RADIAL

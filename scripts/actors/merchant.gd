@@ -347,17 +347,19 @@ func say(line: String) -> void:
 	get_tree().call_group("hud", "show_message", "%s: %s" % [display_name, line], 3.5)
 
 
-func _on_danger_noticed(origin: Vector3, severity: float, _was_calm: bool) -> void:
+func _on_danger_noticed(origin: Vector3, severity: float, _was_calm: bool, source: Node) -> void:
 	refuse_time = maxf(refuse_time, panic_time + 10.0)
-	# Gunfire in or right outside the shop is taken personally.
-	if origin.distance_to(global_position) < 12.0:
+	# The player's gunfire in or right outside the shop is taken personally (a gang shootout isn't
+	# the player's fault).
+	if origin.distance_to(global_position) < 12.0 and (source == null or source is Player):
 		_offend(40.0 * severity, 0.05 * severity)
 
 
 func _on_hurt(hit: HitInfo) -> void:
 	super(hit)
-	_offend(150.0, 0.4)
-	say("Are you insane?!" if is_guide else "Out! Get out of my shop!")
+	if hit.source == null or hit.source is Player:
+		_offend(150.0, 0.4)
+		say("Are you insane?!" if is_guide else "Out! Get out of my shop!")
 
 
 func _offend(seconds: float, reputation_loss: float) -> void:

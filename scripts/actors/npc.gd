@@ -79,7 +79,7 @@ func _on_velocity_computed(safe_velocity: Vector3) -> void:
 	model.pose(_phase, clampf(speed / walk_speed, 0.0, 1.0), run, cower_amount)
 
 
-func _on_danger_noticed(_origin: Vector3, severity: float, was_calm: bool) -> void:
+func _on_danger_noticed(_origin: Vector3, severity: float, was_calm: bool, _source: Node) -> void:
 	if was_calm:
 		var cower_chance := 0.5 if loiter else 0.3
 		if severity >= EventBus.SEVERITY_EXPLOSION:

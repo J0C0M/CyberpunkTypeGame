@@ -71,7 +71,16 @@ User's combat direction (asked at the start): **street gang + police drones**, *
     `pistol_model.gd` / `shotgun_model.gd` (slide/pump animate on `Firearm.fired`). Item resources + icons +
     pickup models; Iron Lotus Arms stocks both guns and both ammo types. Bullets for every gun go through
     `Hitscan.shoot` (`scripts/combat/hitscan.gd`). Test: `tests/test_weapons.tscn`, shots: `tests/shot_weapons.tscn`.
-  - [ ] B3 Street gang (navmesh with roads, cover, perception, states, turf, loot)
+  - [x] B3 Street gang "Rust Jackals": `EnemyNav` (world.tscn) bakes a navmesh on layer 2 from every static
+    collider in the play area (roads walkable, cars/props/posts are holes, ~0.1 s, async). `GangMember`
+    (`scripts/actors/gang_member.gd`, scene `scenes/actors/gang_member.tscn`, extends Person): sight cone +
+    LOS, hears the player's shots, states PATROL/WARN/INVESTIGATE/COVER/ATTACK/CHASE/SEARCH/FLEE, cover from
+    the "cover" group (Car, BreakableProp >= 0.8 m, `CoverBlock`), bursts through `Hitscan`, loot on death.
+    `GangTurf` (`JackalTurf` at x = -56 by the west barricade): crew of 4, warnings, `go_hostile`, fire barrel,
+    crates, neon tag, fresh crew every night. `NpcModel` got `outfit`/`armed` and aim/crouch poses. Person
+    passes the danger `source` on, so merchants only blame the player for the player's gunfire.
+    Tuning (forgiving): 4 dmg, 6.5° spread, 3-round bursts, 2-3.2 s pauses -> ~5 HP/s against all four in
+    the open. Test: `tests/test_gang.tscn`; shots: `tests/shot_gang.tscn`.
   - [ ] B4 Wanted level + police drones, merchant/Ren reactions
   - [ ] B5 Balance pass, docs
 - Part C: bug hunt, screenshot tour, BUGFIX_NOTES.md: not started

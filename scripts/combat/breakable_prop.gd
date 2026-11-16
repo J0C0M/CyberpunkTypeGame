@@ -82,6 +82,9 @@ func _ready() -> void:
 	if Engine.is_editor_hint() or visual == null:
 		return
 	add_to_group("resettable")
+	# Anything waist-high or taller is something to hide behind.
+	if size.y >= 0.8:
+		add_to_group("cover")
 	_health = Damageable.new()
 	_health.max_health = max_health
 	add_child(_health)
@@ -193,3 +196,16 @@ func _spawn_debris(hit: HitInfo, count: int, piece_size: Vector2) -> void:
 	var per_color := maxi(1, count / maxi(1, debris_colors.size()))
 	for color in debris_colors:
 		pool.burst(DebrisPool.Shape.CHUNK, box, size * 0.4, per_color, piece_size, MatLib.surface(color, 0.6, 0.3), push, 3.0)
+
+
+## Ground outline (world space) for the enemies' navmesh and their cover search.
+func cover_outline() -> PackedVector3Array:
+	var outline := PackedVector3Array()
+	var half := Vector2(size.x, size.z) * 0.5
+	for corner: Vector2 in [Vector2(-half.x, -half.y), Vector2(half.x, -half.y), Vector2(half.x, half.y), Vector2(-half.x, half.y)]:
+		outline.append(global_transform * Vector3(corner.x, 0.0, corner.y))
+	return outline
+
+
+func cover_height() -> float:
+	return size.y
