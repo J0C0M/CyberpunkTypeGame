@@ -81,7 +81,14 @@ User's combat direction (asked at the start): **street gang + police drones**, *
     passes the danger `source` on, so merchants only blame the player for the player's gunfire.
     Tuning (forgiving): 4 dmg, 6.5° spread, 3-round bursts, 2-3.2 s pauses -> ~5 HP/s against all four in
     the open. Test: `tests/test_gang.tscn`; shots: `tests/shot_gang.tscn`.
-  - [ ] B4 Wanted level + police drones, merchant/Ren reactions
+  - [x] B4 Wanted level + police drones: `PoliceDispatch` (world.tscn, group "police") turns the player's
+    violence into heat (shots 0.07, 0.015 on Jackal turf; kills: pedestrian 1.2, merchant 1.6, Jackal 0.3;
+    explosions 0.8; hitting a drone 0.15), cools 0.14/s after 15 s quiet while no drone sees the player;
+    one `PoliceDrone` per star (max 3, `scripts/actors/police_drone.gd`): flies over the streets only, circles
+    at 11-16 m, 4-zap bursts (3 dmg), searchlight, core weak spot x2.5, retreats at 30 %, crashes in a small
+    sourceless explosion with salvage. HUD: `ui/wanted_stars.gd`. `GameState.wanted` mirrors the stars:
+    merchants refuse to trade at 2+, Ren has a "heat" scene; Ren has new Jackal/police/med patch tips and a
+    "Who are the Rust Jackals?" topic. Test: `tests/test_police.tscn`; shots: `tests/shot_police.tscn`.
   - [ ] B5 Balance pass, docs
 - Part C: bug hunt, screenshot tour, BUGFIX_NOTES.md: not started
   - Noted for Part C: door number plates (Label3D) face into the apartments (local +Z), check from the hallway.

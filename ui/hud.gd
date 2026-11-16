@@ -22,6 +22,7 @@ var _vignette: TextureRect
 var _hurt_flash := 0.0
 var _damage: DamageIndicator
 var _flatline: Control
+var _wanted: WantedStars
 var _font: Font
 var _crosshair: Crosshair
 var _ammo_label: Label
@@ -68,6 +69,18 @@ func _ready() -> void:
 
 	_build_hotbar(root)
 	_build_health(root)
+	_wanted = WantedStars.new()
+	_wanted.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	root.add_child(_wanted)
+	_wanted.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
+	_wanted.offset_left = -170
+	_wanted.offset_right = 170
+	_wanted.offset_top = 64
+	_wanted.offset_bottom = 92
+	_wanted.stars = 0
+	var police := get_tree().get_first_node_in_group("police") as PoliceDispatch
+	if police:
+		police.heat_changed.connect(func(_heat: float, count: int) -> void: _wanted.stars = count)
 	_build_feed(root)
 	GameState.effects_changed.connect(_update_effects)
 	_update_effects()

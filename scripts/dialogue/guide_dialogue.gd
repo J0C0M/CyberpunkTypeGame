@@ -14,6 +14,9 @@ const TIPS := [
 	"Ammo isn't free anymore since the Ban. Kaz at Iron Lotus sells it by the box. Haggle, he likes that.",
 	"Go home and sleep now and then. Shops restock overnight, and the city has a short memory by morning.",
 	"Glass is cheap, getting it replaced is not. Mind where you aim inside a shop.",
+	"The Rust Jackals hold the west end, by the barricade with the burning barrel. Walk onto their corner and they warn you. Once.",
+	"Start shooting people and the police send drones. Get out of their sight and the heat dies down. Or go home and sleep it off.",
+	"Bleeding? Clinic 24H sells med patches. Slap one on and keep moving. H, if you're the type who likes shortcuts.",
 ]
 
 
@@ -39,6 +42,7 @@ static func build() -> Dictionary:
 				{"text": "Any tips about the city?", "next": &"tips"},
 				{"text": "Tell me about the shops.", "next": &"shops"},
 				{"text": "How does haggling work?", "next": &"barter"},
+				{"text": "Who are the Rust Jackals?", "next": &"jackals"},
 				{"text": "Where's my apartment?", "next": &"apartment"},
 				{"text": "I've got your coupon.", "next": &"coupon", "if": "has:ren_coupon"},
 				{"text": "What have you got to eat?", "next": "", "action": "trade"},
@@ -77,6 +81,14 @@ static func build() -> Dictionary:
 			"text": "My coupon! One Neon Ramen, extra glow. Careful, it's hot. Take it with you if you're in a hurry.",
 			"action": "redeem_coupon",
 			"choices": [{"text": "Thanks, Ren.", "next": &"hub"}],
+		},
+		&"jackals": {
+			"text": "Corner crew at the west end of the street, by the barricade. Masks, cheap pistols, bad manners. Walk onto their corner and they tell you to walk away. Listen to them. Or don't, and bring more than a bowl of noodles. Kaz sells them ammo. Don't tell him I told you.",
+			"choices": [{"text": "Noted.", "next": &"hub"}],
+		},
+		&"heat": {
+			"text": ["Drones! I can hear them from here. What did you do? ...No. Don't tell me. Get off the street, get out of their sight, and they'll lose interest. Or go home and sleep it off.", "Police lights all over my window again. Lie low for a bit, will you? Not in here."],
+			"choices": [{"text": "I'm going.", "next": ""}, {"text": "Just tell me something useful.", "next": &"tips"}],
 		},
 		&"upset": {
 			"text": ["You shot at me! In my own shop! ...Give me a minute. Don't talk to me right now.", "Not now. My hands are still shaking."],

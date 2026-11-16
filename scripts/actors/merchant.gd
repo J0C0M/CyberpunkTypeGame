@@ -249,8 +249,9 @@ func _vanish() -> void:
 	set_process(false)
 
 
+## Scared, offended, dead, or the police are on the player's tail (two stars or more).
 func can_trade() -> bool:
-	return not is_dead and refuse_time <= 0.0 and not is_panicking()
+	return not is_dead and refuse_time <= 0.0 and not is_panicking() and GameState.wanted < 2
 
 
 func mood_text() -> String:
@@ -276,6 +277,8 @@ func refusal_line() -> String:
 		return "Get down! I'm not opening the till with bullets flying!"
 	if anger_time > 0.0:
 		return "You shoot up my street and want a discount? Get out."
+	if GameState.wanted >= 2:
+		return "Drones are all over you. Lose them first, then we talk."
 	return "Not now. Come back later."
 
 
@@ -292,6 +295,8 @@ func _on_interacted(_player: Player) -> void:
 		var start := &"hub" if GameState.flags.get("met_guide", false) else &"first"
 		if anger_time > 0.0 or is_panicking():
 			start = &"upset"
+		elif GameState.wanted >= 1 and GameState.flags.get("met_guide", false):
+			start = &"heat"
 		get_tree().call_group("dialogue_screen", "open_dialogue", display_name, GuideDialogue.build(), start, self)
 		return
 	if not can_trade():

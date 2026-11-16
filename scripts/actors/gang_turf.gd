@@ -26,6 +26,7 @@ var _time := 0.0
 
 func _ready() -> void:
 	add_to_group("night_cleanup")
+	add_to_group("gang_turf")
 	_build_hangout()
 	var region := get_node_or_null(nav) as EnemyNav
 	if region and not region.is_baked:

@@ -18,6 +18,8 @@
 [ext_resource type="Script" path="res://scripts/actors/enemy_nav.gd" id="20_enemy_nav"]
 [ext_resource type="Script" path="res://scripts/actors/gang_turf.gd" id="21_turf"]
 [ext_resource type="PackedScene" path="res://scenes/actors/gang_member.tscn" id="22_gang"]
+[ext_resource type="Script" path="res://scripts/combat/police_dispatch.gd" id="23_police"]
+[ext_resource type="PackedScene" path="res://scenes/actors/police_drone.tscn" id="24_drone"]
 
 [node name="World" type="Node3D"]
 
@@ -153,6 +155,10 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -56, 0, 0)
 script = ExtResource("21_turf")
 member_scene = ExtResource("22_gang")
 nav = NodePath("../EnemyNav")
+
+[node name="PoliceDispatch" type="Node3D" parent="."]
+script = ExtResource("23_police")
+drone_scene = ExtResource("24_drone")
 
 [node name="ImpactEffects" type="Node3D" parent="."]
 script = ExtResource("12_impacts")

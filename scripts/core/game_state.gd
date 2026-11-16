@@ -40,6 +40,8 @@ var flags := {}
 var clock_minutes := START_CLOCK
 ## Running effects: effect id -> {"time": seconds left, "strength": float, "label": HUD text}.
 var effects := {}
+## Police wanted stars (0-5), kept up to date by PoliceDispatch.
+var wanted := 0
 
 ## Empty while the player walks around; otherwise the name of whatever has taken over input
 ## ("trade", "dialogue", "seated"...). Main stops toggling the mouse and the player stops
