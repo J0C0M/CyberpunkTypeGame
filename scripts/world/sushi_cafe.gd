@@ -58,7 +58,7 @@ func _build_shell(geo: GeoBatch, body: StaticBody3D, root: Node3D) -> void:
 
 	# Floor, ceiling, back and side walls.
 	geo.add_box_at(Vector3(WIDTH, FLOOR_Y, DEPTH), Vector3(0, FLOOR_Y * 0.5, -DEPTH * 0.5), floor_mat)
-	BuildKit.box_collider_at(body, Vector3(WIDTH, 1.0, DEPTH), Vector3(0, FLOOR_Y - 0.5, -DEPTH * 0.5))
+	BuildKit.box_collider_at(body, Vector3(WIDTH, 1.0, DEPTH), Vector3(0, FLOOR_Y - 0.5, -DEPTH * 0.5)).set_meta(&"surface", &"wood")
 	geo.add_box_at(Vector3(WIDTH, 0.3, DEPTH), Vector3(0, HEIGHT + 0.15, -DEPTH * 0.5), dark_mat)
 	geo.add_box_at(Vector3(WIDTH, HEIGHT, 0.3), Vector3(0, HEIGHT * 0.5, -DEPTH - 0.15), wall_mat)
 	BuildKit.box_collider_at(body, Vector3(WIDTH, HEIGHT, 0.3), Vector3(0, HEIGHT * 0.5, -DEPTH - 0.15))

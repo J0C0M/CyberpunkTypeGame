@@ -2,7 +2,7 @@
 
 [ext_resource type="Script" path="res://scripts/player/player.gd" id="1_player"]
 [ext_resource type="PackedScene" path="res://scenes/weapons/rifle.tscn" id="2_rifle"]
-[ext_resource type="AudioStream" path="res://assets/audio/footstep.wav" id="3_step"]
+[ext_resource type="Script" path="res://scripts/player/footsteps.gd" id="3_steps"]
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_body"]
 radius = 0.35
@@ -34,7 +34,5 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.19, -0.2, -0.36)
 
 [node name="Rifle" parent="Head/RecoilPivot/Camera3D/WeaponHolder" instance=ExtResource("2_rifle")]
 
-[node name="Footsteps" type="AudioStreamPlayer" parent="."]
-stream = ExtResource("3_step")
-volume_db = -14.0
-max_polyphony = 2
+[node name="Footsteps" type="Node" parent="."]
+script = ExtResource("3_steps")

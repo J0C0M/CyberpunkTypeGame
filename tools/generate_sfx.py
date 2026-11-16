@@ -80,8 +80,8 @@ def crossfade_loop(samples, fade):
 
 
 def write(name, samples):
-    os.makedirs(OUT_DIR, exist_ok=True)
     path = os.path.join(OUT_DIR, name)
+    os.makedirs(os.path.dirname(path), exist_ok=True)
     with wave.open(path, "wb") as f:
         f.setnchannels(1)
         f.setsampwidth(2)
@@ -126,13 +126,6 @@ def reload_sound(rng):
 
 def dry_fire(rng):
     return normalize(click(rng, 3200, 0.07, 0.006), 0.6)
-
-
-def footstep(rng):
-    n = seconds(0.16)
-    scuff = [s * e for s, e in zip(lowpass(noise(n, rng), 900), envelope(n, 0.003, 0.03))]
-    grit = [s * e * 0.25 for s, e in zip(highpass(noise(n, rng), 3000), envelope(n, 0.002, 0.015))]
-    return normalize(mix(scuff, grit), 0.5)
 
 
 def city_ambience(rng):
@@ -323,31 +316,98 @@ def ui_deny(rng):
     return normalize(lowpass(out, 1800), 0.3)
 
 
+def bandpass(samples, low, high):
+    return lowpass(highpass(samples, low), high)
+
+
+def footstep_variant(rng, surface):
+    """One soft footstep: a low heel thump plus a surface-specific scuff, highs rolled off."""
+    length = 0.32 if surface == "wet" else 0.22
+    n = seconds(length)
+    pitch = rng.uniform(0.85, 1.15)
+    heel = []
+    phase = 0.0
+    body_freq = {"concrete": 95, "wet": 85, "metal": 120, "wood": 150, "tile": 130}[surface] * pitch
+    for i in range(n):
+        t = i / SAMPLE_RATE
+        phase += 2 * math.pi * body_freq * (1.0 + 0.4 * math.exp(-t * 60)) / SAMPLE_RATE
+        heel.append(math.sin(phase) * (1 - math.exp(-t / 0.004)) * math.exp(-t / 0.028))
+    env = [(1 - math.exp(-(i / SAMPLE_RATE) / 0.005)) * math.exp(-(i / SAMPLE_RATE) / 0.035) for i in range(n)]
+    if surface == "concrete":
+        scuff = [v * e * 0.55 for v, e in zip(bandpass(noise(n, rng), 300, 1800), env)]
+        extra = [v * e * 0.15 for v, e in zip(bandpass(noise(n, rng), 1500, 2800), env)]
+    elif surface == "wet":
+        splash_env = [(1 - math.exp(-(i / SAMPLE_RATE) / 0.008)) * math.exp(-(i / SAMPLE_RATE) / 0.07) for i in range(n)]
+        scuff = [v * e * 0.7 for v, e in zip(bandpass(noise(n, rng), 600, 3200), splash_env)]
+        extra = [0.0] * n
+        for _ in range(4):
+            start = rng.randrange(seconds(0.04), seconds(0.2))
+            freq = rng.uniform(900, 1800)
+            for i in range(seconds(0.03)):
+                if start + i < n:
+                    extra[start + i] += 0.12 * math.sin(2 * math.pi * freq * i / SAMPLE_RATE * (1 + i / 400.0)) * math.exp(-(i / SAMPLE_RATE) / 0.008)
+    elif surface == "metal":
+        scuff = [v * e * 0.35 for v, e in zip(bandpass(noise(n, rng), 400, 2200), env)]
+        f1, f2 = rng.uniform(520, 700), rng.uniform(980, 1250)
+        extra = [(0.22 * math.sin(2 * math.pi * f1 * i / SAMPLE_RATE) + 0.12 * math.sin(2 * math.pi * f2 * i / SAMPLE_RATE)) * math.exp(-(i / SAMPLE_RATE) / 0.06) * (1 - math.exp(-(i / SAMPLE_RATE) / 0.003)) for i in range(n)]
+    elif surface == "wood":
+        scuff = [v * e * 0.3 for v, e in zip(bandpass(noise(n, rng), 250, 1400), env)]
+        res = rng.uniform(190, 260)
+        extra = [0.35 * math.sin(2 * math.pi * res * i / SAMPLE_RATE) * math.exp(-(i / SAMPLE_RATE) / 0.045) * (1 - math.exp(-(i / SAMPLE_RATE) / 0.004)) for i in range(n)]
+    else:  # tile
+        scuff = [v * e * 0.3 for v, e in zip(bandpass(noise(n, rng), 300, 1500), env)]
+        tap_env = [(1 - math.exp(-(i / SAMPLE_RATE) / 0.002)) * math.exp(-(i / SAMPLE_RATE) / 0.012) for i in range(n)]
+        extra = [v * e * 0.35 for v, e in zip(bandpass(noise(n, rng), 1000, 2600), tap_env)]
+    step = mix(heel, scuff, extra)
+    return normalize(lowpass(lowpass(step, 3000), 3500), 0.5)
+
+
+def landing(rng):
+    n = seconds(0.35)
+    thud = []
+    phase = 0.0
+    for i in range(n):
+        t = i / SAMPLE_RATE
+        phase += 2 * math.pi * (60 + 40 * math.exp(-t * 30)) / SAMPLE_RATE
+        thud.append(math.sin(phase) * (1 - math.exp(-t / 0.005)) * math.exp(-t / 0.07))
+    env = [(1 - math.exp(-(i / SAMPLE_RATE) / 0.006)) * math.exp(-(i / SAMPLE_RATE) / 0.06) for i in range(n)]
+    scuff = [v * e * 0.6 for v, e in zip(bandpass(noise(n, rng), 200, 1400), env)]
+    return normalize(lowpass(mix(thud, scuff), 2500), 0.55)
+
+
 def main():
-    rng = random.Random(2077)
-    write("rifle_shot.wav", rifle_shot(rng))
-    write("rifle_reload.wav", reload_sound(rng))
-    write("rifle_dry_fire.wav", dry_fire(rng))
-    write("footstep.wav", footstep(rng))
-    write("city_ambience.wav", city_ambience(rng))
-    write("neon_buzz.wav", neon_buzz(rng))
-    write("dragon_hum.wav", dragon_hum(rng))
-    write("glass_shatter_1.wav", glass_shatter(rng))
-    write("glass_shatter_2.wav", glass_shatter(rng))
-    write("body_hit.wav", body_hit(rng))
-    write("body_fall.wav", body_fall(rng))
-    write("prop_hit_metal.wav", prop_hit_metal(rng))
-    write("prop_hit_wood.wav", prop_hit_wood(rng))
-    write("prop_break_metal.wav", prop_break_metal(rng))
-    write("prop_break_wood.wav", prop_break_wood(rng))
-    write("prop_break_concrete.wav", prop_break_concrete(rng))
-    write("spark_zap.wav", spark_zap(rng))
-    write("explosion.wav", explosion(rng))
-    write("fire_loop.wav", fire_loop(rng))
-    write("pickup.wav", chime(rng, [880, 1320]))
-    write("trade_cash.wav", cash_register(rng))
-    write("ui_click.wav", ui_blip(rng, 1200))
-    write("ui_deny.wav", ui_deny(rng))
+    sounds = [
+        ("rifle_shot.wav", rifle_shot),
+        ("rifle_reload.wav", reload_sound),
+        ("rifle_dry_fire.wav", dry_fire),
+        ("city_ambience.wav", city_ambience),
+        ("neon_buzz.wav", neon_buzz),
+        ("dragon_hum.wav", dragon_hum),
+        ("glass_shatter_1.wav", glass_shatter),
+        ("glass_shatter_2.wav", glass_shatter),
+        ("body_hit.wav", body_hit),
+        ("body_fall.wav", body_fall),
+        ("prop_hit_metal.wav", prop_hit_metal),
+        ("prop_hit_wood.wav", prop_hit_wood),
+        ("prop_break_metal.wav", prop_break_metal),
+        ("prop_break_wood.wav", prop_break_wood),
+        ("prop_break_concrete.wav", prop_break_concrete),
+        ("spark_zap.wav", spark_zap),
+        ("explosion.wav", explosion),
+        ("fire_loop.wav", fire_loop),
+        ("pickup.wav", lambda rng: chime(rng, [880, 1320])),
+        ("trade_cash.wav", cash_register),
+        ("ui_click.wav", lambda rng: ui_blip(rng, 1200)),
+        ("ui_deny.wav", ui_deny),
+        ("footsteps/land_1.wav", landing),
+        ("footsteps/land_2.wav", landing),
+    ]
+    for surface in ["concrete", "wet", "metal", "wood", "tile"]:
+        for variant in range(1, 5):
+            sounds.append(("footsteps/%s_%d.wav" % (surface, variant), lambda rng, s=surface: footstep_variant(rng, s)))
+    # Each sound has its own random stream (seeded by its name), so adding one never changes the rest.
+    for name, make in sounds:
+        write(name, make(random.Random(name)))
 
 
 if __name__ == "__main__":

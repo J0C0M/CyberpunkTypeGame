@@ -51,6 +51,8 @@ var walkable_faces := PackedVector3Array()
 var _footprints: Array = []
 ## Sidewalk areas (XZ) that street clutter must leave free, like shop entrances and bus stops.
 var _keep_clear: Array[Rect2] = []
+## Metal floor areas (XZ) on the streets: manhole covers and sidewalk grates (for footsteps).
+var _metal_zones: Array[Rect2] = []
 
 var _rng := RandomNumberGenerator.new()
 var _root: Node3D
@@ -68,7 +70,9 @@ func _ready() -> void:
 
 
 func build() -> void:
+	add_to_group("city")
 	BuildKit.clear_generated(self)
+	_metal_zones.clear()
 	walkable_faces = PackedVector3Array()
 	_footprints.clear()
 	_keep_clear = []
@@ -106,6 +110,14 @@ func build() -> void:
 
 	_ground.build_into(_root, "Streets", false)
 	_props.build_into(_root, "StreetProps")
+
+
+## Footstep surface of the street at `point`: "metal" on grates and manhole covers, else "".
+func surface_at(point: Vector3) -> StringName:
+	for zone in _metal_zones:
+		if zone.has_point(Vector2(point.x, point.z)):
+			return &"metal"
+	return &""
 
 
 ## Tallest building top inside `area` (XZ plane); used to keep flight paths above the roofs.
@@ -234,16 +246,22 @@ func _build_street_markings() -> void:
 func _build_street_collision() -> void:
 	var extent := PLAY_LIMIT + 12.0
 	var sidewalk_width := SIDEWALK_OUTER - ROAD_HALF
-	BuildKit.box_collider_at(_body, Vector3(extent * 2.0, 1.0, extent * 2.0), Vector3(0, -0.5, 0))
+	_tag(BuildKit.box_collider_at(_body, Vector3(extent * 2.0, 1.0, extent * 2.0), Vector3(0, -0.5, 0)), &"street", 0.55)
 	for sx: float in [-1.0, 1.0]:
 		for sz: float in [-1.0, 1.0]:
 			var main_len := extent - ROAD_HALF
-			BuildKit.box_collider_at(_body, Vector3(main_len, 1.0, sidewalk_width), Vector3(sx * (ROAD_HALF + main_len * 0.5), CURB_HEIGHT - 0.5, sz * (ROAD_HALF + sidewalk_width * 0.5)))
+			_tag(BuildKit.box_collider_at(_body, Vector3(main_len, 1.0, sidewalk_width), Vector3(sx * (ROAD_HALF + main_len * 0.5), CURB_HEIGHT - 0.5, sz * (ROAD_HALF + sidewalk_width * 0.5))), &"sidewalk", 0.3)
 			var cross_len := extent - SIDEWALK_OUTER
-			BuildKit.box_collider_at(_body, Vector3(sidewalk_width, 1.0, cross_len), Vector3(sx * (ROAD_HALF + sidewalk_width * 0.5), CURB_HEIGHT - 0.5, sz * (SIDEWALK_OUTER + cross_len * 0.5)))
+			_tag(BuildKit.box_collider_at(_body, Vector3(sidewalk_width, 1.0, cross_len), Vector3(sx * (ROAD_HALF + sidewalk_width * 0.5), CURB_HEIGHT - 0.5, sz * (SIDEWALK_OUTER + cross_len * 0.5))), &"sidewalk", 0.3)
 			# Shallow ramps along the curbs so the player glides up instead of snagging on them.
 			_curb_ramp(Vector3(sx * (ROAD_HALF + main_len * 0.5), 0, sz * (ROAD_HALF - 0.6)), Vector3(sx * (ROAD_HALF + main_len * 0.5), CURB_HEIGHT, sz * ROAD_HALF), Vector3.RIGHT, main_len)
 			_curb_ramp(Vector3(sx * (ROAD_HALF - 0.6), 0, sz * (ROAD_HALF + main_len * 0.5)), Vector3(sx * ROAD_HALF, CURB_HEIGHT, sz * (ROAD_HALF + main_len * 0.5)), Vector3.BACK, main_len)
+
+
+## Marks a ground collider with its footstep surface and how puddled the street shader draws it.
+func _tag(collider: CollisionShape3D, surface: StringName, puddles: float) -> void:
+	collider.set_meta(&"surface", surface)
+	collider.set_meta(&"puddles", puddles)
 
 
 ## Thin tilted box whose top surface runs from `low` (road side) to `high` (curb top).
@@ -255,7 +273,7 @@ func _curb_ramp(low: Vector3, high: Vector3, along: Vector3, length: float) -> v
 		normal = -normal
 	var thickness := 0.1
 	var center := (low + high) * 0.5 - normal * thickness * 0.5
-	BuildKit.box_collider(_body, Vector3(length, thickness, (high - low).length()), Transform3D(Basis(along, normal, across), center))
+	_tag(BuildKit.box_collider(_body, Vector3(length, thickness, (high - low).length()), Transform3D(Basis(along, normal, across), center)), &"sidewalk", 0.0)
 
 
 ## Middle band of each sidewalk plus the crosswalks; NPCs walk here and keep clear of lamps and shop fronts.
@@ -868,3 +886,16 @@ func _build_steam_vents() -> void:
 	for pos in [Vector3(-20, 0, -1.5), Vector3(14, 0, 2.0), Vector3(-1.5, 0, 26), Vector3(2.0, 0, -42), Vector3(46, 0, -1.0)]:
 		_props.add_cylinder(0.55, 0.55, 0.03, 10, Transform3D(Basis.IDENTITY, pos + Vector3.UP * 0.015), cover)
 		_root.add_child(BuildKit.steam(pos))
+		_metal_zones.append(Rect2(pos.x - 0.55, pos.z - 0.55, 1.1, 1.1))
+	# Metal grates set into the sidewalks.
+	var grate := MatLib.surface(Color(0.12, 0.12, 0.13), 0.35, 0.85)
+	var slot := MatLib.surface(Color(0.01, 0.01, 0.01), 0.9)
+	for spot in [Vector2(-50, 6.2), Vector2(-31, -6.2), Vector2(35, 6.2), Vector2(58, -6.2), Vector2(6.2, -55), Vector2(-6.2, -36), Vector2(6.2, 22), Vector2(-6.2, 60)]:
+		var along_x := absf(spot.y) < 7.0
+		var size := Vector3(1.4, 0.02, 0.8) if along_x else Vector3(0.8, 0.02, 1.4)
+		var center := Vector3(spot.x, CURB_HEIGHT + 0.006, spot.y)
+		_ground.add_box_at(size, center, grate)
+		for i in 6:
+			var offset := Vector3(-0.5 + i * 0.2, 0.004, 0) if along_x else Vector3(0, 0.004, -0.5 + i * 0.2)
+			_ground.add_box_at(Vector3(0.08, 0.02, size.z - 0.12) if along_x else Vector3(size.x - 0.12, 0.02, 0.08), center + offset, slot)
+		_metal_zones.append(Rect2(center.x - size.x * 0.5, center.z - size.z * 0.5, size.x, size.z))

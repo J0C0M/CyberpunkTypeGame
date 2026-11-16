@@ -19,23 +19,21 @@ extends CharacterBody3D
 @export var reach := 2.6
 
 @export_group("Head bob")
-@export var bob_frequency := 1.9
 @export var bob_amount := 0.035
 
 @onready var head: Node3D = $Head
 @onready var recoil_pivot: Node3D = $Head/RecoilPivot
 @onready var camera: Camera3D = $Head/RecoilPivot/Camera3D
 @onready var weapon: Rifle = $Head/RecoilPivot/Camera3D/WeaponHolder/Rifle
-@onready var footsteps: AudioStreamPlayer = $Footsteps
+@onready var footsteps: Footsteps = $Footsteps
 
 var is_sprinting := false
 ## The Interactable under the crosshair within reach, or null. The HUD shows its prompt.
 var focused_interactable: Interactable
 
 var _gravity: float = ProjectSettings.get_setting("physics/3d/default_gravity")
-var _bob_phase := 0.0
-var _last_step := 0
 var _camera_rest := Vector3.ZERO
+var _bob_strength := 0.0
 ## Visual recoil offset (x = pitch, y = yaw) that springs back to zero.
 var _recoil := Vector2.ZERO
 ## Camera shake strength (explosions); decays over time.
@@ -94,9 +92,11 @@ func _physics_process(delta: float) -> void:
 	velocity.z = horizontal.y + _knockback.z
 	_knockback = _knockback.lerp(Vector3.ZERO, 1.0 - exp(-4.0 * delta))
 
+	var before := global_position
 	move_and_slide()
 	velocity.x -= _knockback.x
 	velocity.z -= _knockback.z
+	footsteps.update(self, delta, Vector2(global_position.x - before.x, global_position.z - before.z).length())
 	_update_interaction()
 	_update_camera_effects(delta)
 
@@ -119,19 +119,11 @@ func _update_interaction() -> void:
 
 
 func _update_camera_effects(delta: float) -> void:
-	var speed := Vector2(velocity.x, velocity.z).length()
-	if is_on_floor() and speed > 0.5:
-		_bob_phase += delta * bob_frequency * TAU * (speed / walk_speed) * 0.5
-	else:
-		_bob_phase = lerpf(_bob_phase, roundf(_bob_phase / PI) * PI, 1.0 - exp(-8.0 * delta))
-	# A footstep each time the bob passes the bottom of its cycle.
-	var step := floori(_bob_phase / PI)
-	if step != _last_step and is_on_floor() and speed > 0.5:
-		footsteps.pitch_scale = randf_range(0.85, 1.15)
-		footsteps.play()
-	_last_step = step
-	var bob_strength := clampf(speed / walk_speed, 0.0, 1.5) * bob_amount
-	camera.position = _camera_rest + Vector3(cos(_bob_phase) * bob_strength * 0.5, absf(sin(_bob_phase)) * bob_strength, 0.0)
+	# The bob follows the footstep phase (one dip per step), so steps and bob line up.
+	var speed := Vector2(velocity.x, velocity.z).length() if is_on_floor() else 0.0
+	_bob_strength = lerpf(_bob_strength, clampf(speed / walk_speed, 0.0, 1.5) * bob_amount, 1.0 - exp(-8.0 * delta))
+	var phase := footsteps.phase
+	camera.position = _camera_rest + Vector3(cos(phase) * _bob_strength * 0.5, absf(sin(phase)) * _bob_strength, 0.0)
 
 	var target_fov := base_fov + (sprint_fov_boost if is_sprinting else 0.0)
 	camera.fov = lerpf(camera.fov, target_fov, 1.0 - exp(-6.0 * delta))
