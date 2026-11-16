@@ -23,6 +23,8 @@ const CAB_HALF := 1.2
 const CAB_DEPTH := 2.4
 ## The player's apartment: the street-side corner unit.
 const APARTMENT_X := 1.6
+## The window at the hallway's east end: from/to along Z, and its sill and lintel above the floor.
+const HALL_WINDOW := Vector4(-9.8, -8.4, 0.8, 2.4)
 const ACCENT := Color(0.62, 0.28, 1.0)
 
 const DING := preload("res://assets/audio/elevator_ding.wav")
@@ -359,12 +361,12 @@ func _build_upper_shell() -> void:
 	var sill := UPPER_Y + 0.75
 	var lintel := UPPER_Y + 2.85
 	_wall_with_window(Vector3(-half, bottom, -0.3), Vector3(half, top, 0.0), APARTMENT_X + 0.6, half - 0.6, sill, lintel, facade, true)
-	_wall_with_window(Vector3(half - 0.3, bottom, -depth), Vector3(half, top, 0.0), -7.2, -0.9, sill, lintel, facade, false)
+	# The cross-street side has two openings: the hallway's end window and the apartment's.
+	_wall_with_window(Vector3(half - 0.3, bottom, -depth), Vector3(half, top, HALL_FRONT_Z), HALL_WINDOW.x, HALL_WINDOW.y, UPPER_Y + HALL_WINDOW.z, UPPER_Y + HALL_WINDOW.w, facade, false)
+	_wall_with_window(Vector3(half - 0.3, bottom, HALL_FRONT_Z), Vector3(half, top, 0.0), -7.2, -0.9, sill, lintel, facade, false)
 	_geo.color = Color.WHITE
 	for wall in [[Vector3(width, UPPER_HEIGHT, 0.3), Vector3(0, UPPER_Y + UPPER_HEIGHT * 0.5, -0.15)], [Vector3(0.3, UPPER_HEIGHT, depth), Vector3(half - 0.15, UPPER_Y + UPPER_HEIGHT * 0.5, -depth * 0.5)], [Vector3(0.3, UPPER_HEIGHT, depth), Vector3(-half + 0.15, UPPER_Y + UPPER_HEIGHT * 0.5, -depth * 0.5)]]:
 		BuildKit.box_collider_at(_body, wall[0], wall[1])
-	# The hallway's end window looks down the cross street.
-	_window_glass(Vector3(half - 0.15, UPPER_Y + 1.6, (HALL_FRONT_Z + HALL_BACK_Z) * 0.5), Vector3(0.04, 1.6, 1.4))
 
 
 ## A wall slab between `low` and `high` (corners) with a window from `from` to `to` along it.
@@ -416,8 +418,17 @@ func _build_hallway() -> void:
 	_geo.add_box_at(Vector3(1.2, UPPER_HEIGHT - 2.3, 0.3), Vector3(door_x, UPPER_Y + 2.3 + (UPPER_HEIGHT - 2.3) * 0.5, HALL_FRONT_Z + 0.15), lining)
 	_geo.add_box_at(Vector3(0.3, UPPER_HEIGHT, -HALL_FRONT_Z), Vector3(APARTMENT_X - 0.15, UPPER_Y + UPPER_HEIGHT * 0.5, HALL_FRONT_Z * 0.5), lining)
 	BuildKit.box_collider_at(_body, Vector3(0.3, UPPER_HEIGHT, -HALL_FRONT_Z), Vector3(APARTMENT_X - 0.15, UPPER_Y + UPPER_HEIGHT * 0.5, HALL_FRONT_Z * 0.5))
-	# Hallway end walls (the east one has the window built into the shell).
+	# Hallway end walls. The east one lines the shell around the end window (the shell's facade
+	# shader would otherwise paint lit "windows" on the inside of the wall).
 	_geo.add_box_at(Vector3(0.05, UPPER_HEIGHT, hall_width), Vector3(-half + 0.33, UPPER_Y + UPPER_HEIGHT * 0.5, hall_center_z), lining)
+	var east := half - 0.33
+	var sill := UPPER_Y + HALL_WINDOW.z
+	var lintel := UPPER_Y + HALL_WINDOW.w
+	for piece in [[Vector2(HALL_BACK_Z, HALL_WINDOW.x), Vector2(UPPER_Y, UPPER_Y + UPPER_HEIGHT)], [Vector2(HALL_WINDOW.y, HALL_FRONT_Z), Vector2(UPPER_Y, UPPER_Y + UPPER_HEIGHT)],
+			[Vector2(HALL_WINDOW.x, HALL_WINDOW.y), Vector2(UPPER_Y, sill)], [Vector2(HALL_WINDOW.x, HALL_WINDOW.y), Vector2(lintel, UPPER_Y + UPPER_HEIGHT)]]:
+		var span: Vector2 = piece[0]
+		var vertical: Vector2 = piece[1]
+		_geo.add_box_at(Vector3(0.05, vertical.y - vertical.x, span.y - span.x), Vector3(east, (vertical.x + vertical.y) * 0.5, (span.x + span.y) * 0.5), lining)
 	# Doors: the player's apartment and the neighbours' (locked).
 	# A Door faces its local +Z, so front-wall doors turn round (PI) to show their numbers to the hallway.
 	var doors := [[door_x, HALL_FRONT_Z, PI, "1107", false], [-1.2, HALL_FRONT_Z, PI, "1106", true], [-6.4, HALL_FRONT_Z, PI, "1105", true],

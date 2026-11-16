@@ -29,6 +29,7 @@ what was wrong, how it was found and what changed. Tools used for the pass (all 
 | 9 | Damage vignette covered most of the screen in red during a firefight. | `tests/shot_gang.tscn` | Smaller, weaker vignette that fades faster. |
 | 10 | The pistol and shotgun view models were dark, small shapes, nearly invisible at night. | `tests/shot_weapons.tscn` | Lighter two-tone materials, wood on the shotgun, stronger fill lights, pistol held a little higher. |
 | 11 | Police drones read as floating lights, not machines. | `tests/shot_police.tscn` | A third bigger, with a light belt and red/blue side bars. |
+| 18 | A beige "lit window" floated low on the hallway's end wall. The end wall was the building's outer facade, whose shader paints lit windows on both faces, and the hallway's end window was glass embedded in a solid wall with no opening. | Tour: `hallway_doors`; a ray cast through the pixel found the shell wall | The shell has a real opening for the hallway window and the hallway lines the wall around it, like the apartment already did. |
 
 ## Gameplay and physics
 
@@ -40,3 +41,44 @@ what was wrong, how it was found and what changed. Tools used for the pass (all 
 | 15 | The couch view was a fixed camera. | Known issue from the handoff | Seated, the mouse turns the head a little (about 40 degrees each way). |
 | 16 | Flatlining while seated would have left the camera stuck at the couch; flatlining during an elevator ride would have handed control back early when the ride finished. | Code review of the new death sequence | The seat lets go of the camera when the player dies; the elevator ride stops quietly if something else takes over input. |
 | 17 | The 1107 door's interact box sat mostly on one side of the door, only a centimetre ahead of the panel's collider from the other side. | Writing the key-card test | The box is centred on the door, so both sides reach it before the panel. |
+
+## Performance
+
+Measured with `tests/perf_bench.tscn` (windowed, vsync off, RTX 4070 SUPER, 1280x720 window, 640x360
+internal resolution):
+
+| Scene | Average | 99th percentile | Worst frame |
+| --- | --- | --- | --- |
+| Crossing at rest | 1.4 ms (~720 fps) | 1.5 ms | 2.3 ms |
+| Two cars exploding in a chain, crowd panicking | 1.3 ms | 1.4 ms | 2.7 ms |
+| All four Jackals and three police drones in a firefight, player firing | 1.6 ms | 1.9 ms | 2.5 ms |
+
+No spikes worth fixing: debris, decals and bodies are pooled and capped, and particles are pre-made.
+There are 144 lights in the world (116 omni, 28 spot, one with shadows), far below the 512
+clustered-element limit, so lights don't pop from cluster limits. The enemy navmesh bakes in about
+0.1 s on a background thread.
+
+## Checked and fine
+
+- **UI scaling:** HUD, inventory and menus at 1280x720, 1024x768 (4:3) and 2560x1080 (21:9): the
+  layout expands, nothing overlaps or clips. UI layers sit outside the retro filter and stay sharp
+  (only the inventory's inspect view is pixelated, on purpose).
+- **Thresholds, floors and the elevator** (`tests/test_world.tscn`, the player walking under
+  simulated input): out of the noodle bar, in through the lobby doors, the elevator ride (arrives
+  standing on the 11th floor), through the 1107 door and back.
+- **Menus over menus:** the inventory won't open during the elevator ride, over a dialogue, while
+  seated or dead; trade/inventory/pause all claim input and give the mouse back when closed
+  (checked windowed; headless can't capture the mouse).
+- **Bodies, loot and debris** despawn (bodies capped at 10 and sink after 60 s, loot after 150 s,
+  dropped items after 10 min, everything at the end of the night).
+- **Exposure:** the environment has no auto exposure, so there is no jump between inside and outside.
+
+## Known remaining issues
+
+- Runs cut off by `--quit-after` can still report leaked audio streams at exit (the engine stops
+  mid-playback); quitting from the game is clean.
+- Gang damage depends on how close the crew stands: about 2.5-7.5 HP/s against all four in the open.
+- Pedestrians can still be pushed briefly against each other by crowd avoidance (under 1 % of their
+  walking time); they recover on their own.
+- The gang, the drones and the player's bullets don't check the Jackals' friendly fire with drones:
+  a drone can be hit by a Jackal standing in the line of fire (rare, and arguably fine).

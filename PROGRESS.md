@@ -97,5 +97,6 @@ User's combat direction (asked at the start): **street gang + police drones**, *
     orientation, sign poles through text, dark lobby/hallway/cyberware/gun shop, stale prompts.
   - [x] Pedestrians: props cut out of their navmesh + unstick (`tests/test_crowd.tscn`: 14.8 % -> <1 % stuck).
   - [x] Explosions blocked by walls; seated look-around; flatline while seated / in the elevator.
-  - [ ] Performance (explosion + panic, combat with enemies and drones), UI at other resolutions,
-    remaining gameplay checks, final re-tour.
+  - [x] Performance (`tests/perf_bench.tscn`: 1.3-1.6 ms average, worst 2.7 ms), UI at 4:3 and 21:9,
+    walk-through test (`tests/test_world.tscn`), hallway end window/lining.
+  - [ ] Final re-tour of all viewpoints, merge.
