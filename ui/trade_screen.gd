@@ -1,6 +1,8 @@
 extends CanvasLayer
 ## Buy/sell screen: the player's inventory and the merchant's stock side by side with prices and
-## both sides' credits. The game pauses and the mouse is freed while it is open; Esc leaves.
+## both sides' credits. The player can pay the price or haggle: set an offer with the slider and
+## the merchant accepts, counters or refuses (see Merchant.judge_*_offer). The game pauses and
+## the mouse is freed while it is open; Esc leaves.
 ## Opened through the "trade_screen" group: call_group("trade_screen", "open_for", merchant).
 
 const CASH_SOUND := preload("res://assets/audio/trade_cash.wav")
@@ -18,6 +20,12 @@ var _merchant_list: ItemList
 var _detail: Label
 var _speech: Label
 var _deal_button: Button
+var _offer_slider: HSlider
+var _offer_label: Label
+var _offer_button: Button
+var _counter_button: Button
+## Price the merchant countered with for the selected item (0 = none).
+var _counter := 0
 var _player_ids: Array[StringName] = []
 var _merchant_ids: Array[StringName] = []
 ## The item being looked at and whether the player would be buying it.
@@ -104,6 +112,8 @@ func _on_merchant_item(index: int) -> void:
 func _select(id: StringName, buying: bool) -> void:
 	_selected = id
 	_buying = buying
+	_counter = 0
+	_reset_offer()
 	_play(CLICK_SOUND)
 	_update_detail()
 
@@ -113,7 +123,14 @@ func _update_detail() -> void:
 		_detail.text = "Pick something on either side."
 		_deal_button.disabled = true
 		_deal_button.text = "DEAL"
+		_offer_button.disabled = true
+		_offer_slider.editable = false
+		_counter_button.visible = false
 		return
+	_offer_slider.editable = true
+	_offer_button.disabled = false
+	_counter_button.visible = _counter > 0
+	_counter_button.text = "TAKE %d ¢" % _counter
 	var pack := ItemDB.pack_size(_selected)
 	var unit := " for a box of %d" % pack if pack > 1 else ""
 	var price := current_price()
@@ -129,6 +146,51 @@ func current_price() -> int:
 
 func _on_deal() -> void:
 	_complete(current_price())
+
+
+## Offers below the asking price when buying, above the merchant's offer when selling.
+func _reset_offer() -> void:
+	if _selected == &"":
+		return
+	var price := current_price()
+	_offer_slider.min_value = maxf(1.0, floorf(price * 0.4)) if _buying else price
+	_offer_slider.max_value = price if _buying else ceilf(price * 1.8) + 1.0
+	_offer_slider.value = roundf(price * 0.85) if _buying else roundf(price * 1.2)
+	_on_offer_changed(_offer_slider.value)
+
+
+func _on_offer_changed(value: float) -> void:
+	_offer_label.text = "OFFER %4d ¢" % int(value)
+
+
+func _on_offer() -> void:
+	var offer := int(_offer_slider.value)
+	var answer := _merchant.judge_purchase_offer(_selected, offer) if _buying else _merchant.judge_sale_offer(_selected, offer)
+	_say(answer["line"])
+	match answer["verdict"]:
+		Merchant.Verdict.ACCEPT:
+			_counter = 0
+			_complete(answer["price"])
+			return
+		Merchant.Verdict.COUNTER:
+			_counter = answer["price"]
+			_play(CLICK_SOUND)
+		Merchant.Verdict.REFUSE:
+			_counter = 0
+			_play(DENY_SOUND)
+	_refresh_keep_speech()
+
+
+func _on_take_counter() -> void:
+	var price := _counter
+	_counter = 0
+	_complete(price)
+
+
+func _refresh_keep_speech() -> void:
+	var line := _speech.text
+	_refresh()
+	_speech.text = line
 
 
 func _complete(price: int) -> void:
@@ -208,7 +270,7 @@ func _build() -> void:
 
 	var footer := HBoxContainer.new()
 	column.add_child(footer)
-	var hint := UiStyle.label("Click an item on either side.", 13, Color(0.6, 0.6, 0.7), Color.BLACK)
+	var hint := UiStyle.label("Click an item, then pay up or haggle with the slider. Lowball too often and they get annoyed.", 13, Color(0.6, 0.6, 0.7), Color.BLACK)
 	hint.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	footer.add_child(hint)
 	var leave := Button.new()
@@ -225,6 +287,27 @@ func _build_actions(row: HBoxContainer) -> void:
 	UiStyle.style_button(_deal_button, Palette.LIME, 17)
 	_deal_button.pressed.connect(_on_deal)
 	row.add_child(_deal_button)
+	var gap := Control.new()
+	gap.custom_minimum_size = Vector2(24, 0)
+	row.add_child(gap)
+	_offer_label = UiStyle.label("OFFER    0 ¢", 16, Palette.AMBER, Palette.AMBER.darkened(0.7))
+	row.add_child(_offer_label)
+	_offer_slider = HSlider.new()
+	_offer_slider.custom_minimum_size = Vector2(260, 24)
+	_offer_slider.step = 1.0
+	_offer_slider.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	_offer_slider.value_changed.connect(_on_offer_changed)
+	row.add_child(_offer_slider)
+	_offer_button = Button.new()
+	_offer_button.text = "MAKE OFFER"
+	UiStyle.style_button(_offer_button, Palette.AMBER, 16)
+	_offer_button.pressed.connect(_on_offer)
+	row.add_child(_offer_button)
+	_counter_button = Button.new()
+	UiStyle.style_button(_counter_button, Palette.CYAN, 16)
+	_counter_button.pressed.connect(_on_take_counter)
+	_counter_button.visible = false
+	row.add_child(_counter_button)
 
 
 func _list_column(parent: Control, color: Color) -> Array:

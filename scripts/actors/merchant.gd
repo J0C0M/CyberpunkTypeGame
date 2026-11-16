@@ -8,6 +8,9 @@ extends Person
 
 signal trade_requested(merchant: Merchant)
 
+## How a merchant answers a haggled offer.
+enum Verdict { ACCEPT, COUNTER, REFUSE }
+
 ## Lowball offers a merchant puts up with before getting annoyed.
 const MAX_PATIENCE := 3
 
@@ -54,7 +57,7 @@ func _process(delta: float) -> void:
 	refuse_time = maxf(0.0, refuse_time - delta)
 	anger_time = maxf(0.0, anger_time - delta)
 	annoyed_time = maxf(0.0, annoyed_time - delta)
-	if patience < MAX_PATIENCE:
+	if patience < MAX_PATIENCE and annoyed_time <= 0.0:
 		_patience_regen += delta
 		if _patience_regen > 25.0:
 			_patience_regen = 0.0
@@ -96,6 +99,59 @@ func buy_price(id: StringName) -> int:
 	var mood := 0.8 if anger_time > 0.0 else 1.0
 	var price := ItemDB.base_price(id) * ItemDB.pack_size(id) * rate * mood * (1.0 + 0.12 * reputation())
 	return maxi(1, roundi(price))
+
+
+## The player offers `offer` for one pack of `id`, below the asking price. Returns
+## {"verdict": Verdict, "price": int, "line": String}. Accepts close offers (more readily with good
+## reputation and patience left), counters middling ones and refuses lowballs, which costs patience.
+func judge_purchase_offer(id: StringName, offer: int) -> Dictionary:
+	var asking := sell_price(id)
+	if offer >= asking:
+		return _verdict(Verdict.ACCEPT, offer, "Deal.")
+	if annoyed_time > 0.0:
+		return _verdict(Verdict.REFUSE, asking, "Price is the price. %d ¢." % asking)
+	var ratio := float(offer) / asking
+	var rep := reputation()
+	if ratio >= 0.93 - 0.06 * rep - 0.02 * patience:
+		return _verdict(Verdict.ACCEPT, offer, ["Fine. %d ¢.", "You drive a hard bargain. %d.", "For you? %d."].pick_random() % offer)
+	if ratio >= 0.68 - 0.05 * rep:
+		var counter := roundi(asking - (asking - offer) * (0.35 + 0.2 * rep))
+		return _verdict(Verdict.COUNTER, counter, ["Meet me at %d ¢.", "%d. That's as low as I go.", "Can't do that. %d ¢?"].pick_random() % counter)
+	return _lowballed(asking)
+
+
+## The player asks `ask` for one pack of `id`, above what the merchant offered. Same rules mirrored.
+func judge_sale_offer(id: StringName, ask: int) -> Dictionary:
+	var price := buy_price(id)
+	if ask <= price:
+		return _verdict(Verdict.ACCEPT, ask, "Deal.")
+	if annoyed_time > 0.0:
+		return _verdict(Verdict.REFUSE, price, "I said %d ¢. Take it or leave it." % price)
+	var ratio := float(ask) / price
+	var rep := reputation()
+	if ratio <= 1.06 + 0.06 * rep + 0.02 * patience:
+		return _verdict(Verdict.ACCEPT, ask, ["Alright, %d ¢.", "Sure, %d. Don't tell anyone."].pick_random() % ask)
+	if ratio <= 1.45 + 0.1 * rep:
+		var counter := roundi(price + (ask - price) * (0.35 + 0.2 * rep))
+		return _verdict(Verdict.COUNTER, counter, ["I'll go to %d ¢.", "%d, and you're robbing me.", "How about %d?"].pick_random() % counter)
+	return _lowballed(price)
+
+
+func _verdict(verdict: Verdict, price: int, line: String) -> Dictionary:
+	if verdict == Verdict.ACCEPT:
+		GameState.change_reputation(merchant_id, 0.01)
+	return {"verdict": verdict, "price": price, "line": line}
+
+
+func _lowballed(price: int) -> Dictionary:
+	patience -= 1
+	_patience_regen = 0.0
+	GameState.change_reputation(merchant_id, -0.03)
+	if patience <= 0:
+		patience = 0
+		annoyed_time = 45.0
+		return _verdict(Verdict.REFUSE, price, "That's it. You're wasting my time. Prices just went up.")
+	return _verdict(Verdict.REFUSE, price, ["Insulting.", "Is that a joke?", "No. Try again, seriously this time.", "You're not even close."].pick_random())
 
 
 ## Moves one pack from the merchant to the player for `price`. Returns an error line or "".
