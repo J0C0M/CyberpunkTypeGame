@@ -1,0 +1,23 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/world/shop_interior.gd" id="1_shop"]
+[ext_resource type="PackedScene" path="res://scenes/actors/merchant.tscn" id="2_merchant"]
+
+[node name="Clinic24H" type="Node3D"]
+script = ExtResource("1_shop")
+theme = 3
+place_id = &"clinic"
+place_label = "Clinic 24H"
+sign_text = "CLINIC 24H"
+sign_subtext = "医"
+accent = Color(0.45, 1, 0.3, 1)
+floor_surface = &"tile"
+
+[node name="Merchant" parent="." instance=ExtResource("2_merchant")]
+merchant_id = &"ayo"
+display_name = "Nurse Ayo"
+shop_name = "Clinic 24H"
+catalog = &"clinic"
+look_seed = 45
+is_guide = false
+greeting = "Bleeding? No? Then we can talk prices."

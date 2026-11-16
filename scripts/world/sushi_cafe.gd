@@ -1,7 +1,7 @@
 @tool
 class_name SushiCafe
 extends Node3D
-## Futuristic kaiten (conveyor-belt) sushi cafe built from primitives. The player spawns inside.
+## Futuristic kaiten (conveyor-belt) sushi cafe built from primitives, with Chef Hiro behind the counter.
 ## Local space: the shop front is the plane z = 0 facing +Z (the street); the room runs to z = -DEPTH.
 ## Everything visual is generated in _ready (also in the editor), so it is easy to swap for a model.
 
@@ -28,7 +28,7 @@ func _ready() -> void:
 	var root := BuildKit.generated_root(self, "Generated")
 	var geo := GeoBatch.new()
 	var body := BuildKit.static_body(root)
-	_build_shell(geo, body)
+	_build_shell(geo, body, root)
 	_build_front(geo, root)
 	_build_counter(geo, body)
 	_build_back_wall(geo, root)
@@ -37,6 +37,8 @@ func _ready() -> void:
 	geo.build_into(root, "CafeGeometry")
 	_build_plates(root)
 	_build_lights(root)
+	if not Engine.is_editor_hint():
+		GameState.register_place(&"sushi", "Sushi Kaiten", global_transform * Vector3(0, 0, 2.0))
 
 
 func _process(delta: float) -> void:
@@ -48,7 +50,7 @@ func _process(delta: float) -> void:
 		_plates[i].position = _belt_point(_belt_offset + i * spacing)
 
 
-func _build_shell(geo: GeoBatch, body: StaticBody3D) -> void:
+func _build_shell(geo: GeoBatch, body: StaticBody3D, root: Node3D) -> void:
 	var floor_mat := MatLib.surface(Color(0.24, 0.14, 0.1), 0.3, 0.0, 0.1)
 	var wall_mat := MatLib.surface(Color(0.32, 0.2, 0.15), 0.7)
 	var slat_mat := MatLib.surface(Palette.WOOD, 0.6)
@@ -56,7 +58,7 @@ func _build_shell(geo: GeoBatch, body: StaticBody3D) -> void:
 
 	# Floor, ceiling, back and side walls.
 	geo.add_box_at(Vector3(WIDTH, FLOOR_Y, DEPTH), Vector3(0, FLOOR_Y * 0.5, -DEPTH * 0.5), floor_mat)
-	BuildKit.box_collider_at(body, Vector3(WIDTH, 1.0, DEPTH), Vector3(0, FLOOR_Y - 0.5, -DEPTH * 0.5))
+	BuildKit.box_collider_at(body, Vector3(WIDTH, 1.0, DEPTH), Vector3(0, FLOOR_Y - 0.5, -DEPTH * 0.5)).set_meta(&"surface", &"wood")
 	geo.add_box_at(Vector3(WIDTH, 0.3, DEPTH), Vector3(0, HEIGHT + 0.15, -DEPTH * 0.5), dark_mat)
 	geo.add_box_at(Vector3(WIDTH, HEIGHT, 0.3), Vector3(0, HEIGHT * 0.5, -DEPTH - 0.15), wall_mat)
 	BuildKit.box_collider_at(body, Vector3(WIDTH, HEIGHT, 0.3), Vector3(0, HEIGHT * 0.5, -DEPTH - 0.15))
@@ -68,14 +70,14 @@ func _build_shell(geo: GeoBatch, body: StaticBody3D) -> void:
 			var z := -0.8 - i * 0.8
 			geo.add_box_at(Vector3(0.06, HEIGHT - 0.6, 0.12), Vector3(side * (WIDTH * 0.5 - 0.03), HEIGHT * 0.5 + 0.1, z), slat_mat)
 
-	# Front: sills, glass, door frame and the sign band. Door gap is x in [-1.3, 1.3].
+	# Front: sills, breakable glass, door frame and the sign band. Door gap is x in [-1.3, 1.3].
 	var frame_mat := MatLib.surface(Palette.METAL_DARK, 0.35, 0.6)
-	var glass_mat := MatLib.glass(Color(0.45, 0.75, 1.0, 0.1))
 	for side: float in [-1.0, 1.0]:
 		var cx := side * 3.65
 		geo.add_box_at(Vector3(4.7, 0.5, 0.3), Vector3(cx, 0.25, -0.15), frame_mat)
-		geo.add_box_at(Vector3(4.7, 2.7, 0.04), Vector3(cx, 1.85, -0.15), glass_mat)
-		BuildKit.box_collider_at(body, Vector3(4.7, 3.2, 0.3), Vector3(cx, 1.6, -0.15))
+		BuildKit.box_collider_at(body, Vector3(4.7, 0.5, 0.3), Vector3(cx, 0.25, -0.15))
+		for half: float in [-1.0, 1.0]:
+			BuildKit.glass_pane(root, Transform3D(Basis.IDENTITY, Vector3(cx + half * 1.19, 1.85, -0.15)), Vector3(2.3, 2.7, 0.04), Color(0.45, 0.75, 1.0, 0.1))
 		geo.add_box_at(Vector3(0.15, 3.2, 0.32), Vector3(side * 1.3, 1.6, -0.15), frame_mat)
 		geo.add_box_at(Vector3(0.3, SHELL_TOP, 0.4), Vector3(side * 6.15, SHELL_TOP * 0.5, -0.1), frame_mat)
 		geo.add_box_at(Vector3(0.08, 2.7, 0.1), Vector3(cx, 1.85, -0.15), frame_mat)

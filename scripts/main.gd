@@ -14,6 +14,9 @@ func _ready() -> void:
 
 
 func _input(event: InputEvent) -> void:
+	# Menus, dialogue and seats own the mouse and Esc while they are open.
+	if not GameState.is_free_roaming():
+		return
 	# Mouse motion does not reliably cross the SubViewportContainer while the mouse is captured,
 	# so mouse look is routed to the player from here.
 	if event is InputEventMouseMotion and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:

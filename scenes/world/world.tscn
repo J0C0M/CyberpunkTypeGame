@@ -2,7 +2,6 @@
 
 [ext_resource type="Environment" path="res://assets/environment/night_city_environment.tres" id="1_env"]
 [ext_resource type="PackedScene" path="res://scenes/player/player.tscn" id="2_player"]
-[ext_resource type="PackedScene" path="res://scenes/world/sushi_cafe.tscn" id="5_cafe"]
 [ext_resource type="PackedScene" path="res://scenes/world/city.tscn" id="6_city"]
 [ext_resource type="PackedScene" path="res://scenes/world/skyline.tscn" id="7_skyline"]
 [ext_resource type="Script" path="res://scripts/world/flight_path.gd" id="8_flight"]
@@ -10,9 +9,11 @@
 [ext_resource type="Script" path="res://scripts/actors/npc_crowd.gd" id="10_crowd"]
 [ext_resource type="PackedScene" path="res://scenes/actors/npc.tscn" id="11_npc"]
 [ext_resource type="Script" path="res://scripts/weapons/impact_effects.gd" id="12_impacts"]
-[ext_resource type="PackedScene" path="res://scenes/props/ammo_crate.tscn" id="13_crate"]
 [ext_resource type="AudioStream" path="res://assets/audio/city_ambience.wav" id="14_ambience"]
 [ext_resource type="AudioStream" path="res://assets/audio/dragon_hum.wav" id="15_hum"]
+[ext_resource type="Script" path="res://scripts/combat/debris_pool.gd" id="16_debris"]
+[ext_resource type="Script" path="res://scripts/core/sfx_pool.gd" id="17_sfx"]
+[ext_resource type="Script" path="res://scripts/combat/explosions.gd" id="18_explosions"]
 
 [node name="World" type="Node3D"]
 
@@ -139,14 +140,17 @@ npc_scene = ExtResource("11_npc")
 
 [node name="NavigationRegion3D" type="NavigationRegion3D" parent="Crowd"]
 
-[node name="SushiCafe" parent="." instance=ExtResource("5_cafe")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 24, 0, -9)
-
-[node name="AmmoCrate" parent="." instance=ExtResource("13_crate")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 19, 0.15, -10.25)
-
 [node name="ImpactEffects" type="Node3D" parent="."]
 script = ExtResource("12_impacts")
+
+[node name="DebrisPool" type="Node3D" parent="."]
+script = ExtResource("16_debris")
+
+[node name="SfxPool" type="Node3D" parent="."]
+script = ExtResource("17_sfx")
+
+[node name="Explosions" type="Node3D" parent="."]
+script = ExtResource("18_explosions")
 
 [node name="CityAmbience" type="AudioStreamPlayer" parent="."]
 stream = ExtResource("14_ambience")
@@ -154,4 +158,4 @@ volume_db = -12.0
 autoplay = true
 
 [node name="Player" parent="." instance=ExtResource("2_player")]
-transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, 24, 0.15, -13)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 13.5, 0.15, -11.6)

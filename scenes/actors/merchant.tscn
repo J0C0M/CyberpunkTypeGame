@@ -1,0 +1,20 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/actors/merchant.gd" id="1_merchant"]
+[ext_resource type="Script" path="res://scripts/actors/npc_model.gd" id="2_model"]
+
+[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_merchant"]
+radius = 0.3
+height = 1.52
+
+[node name="Merchant" type="CharacterBody3D"]
+collision_layer = 4
+collision_mask = 1
+script = ExtResource("1_merchant")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.76, 0)
+shape = SubResource("CapsuleShape3D_merchant")
+
+[node name="Model" type="Node3D" parent="."]
+script = ExtResource("2_model")

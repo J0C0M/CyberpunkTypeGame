@@ -1,6 +1,7 @@
 class_name Player
 extends CharacterBody3D
-## First-person controller: walk, sprint, jump, mouse look, head bob and weapon recoil.
+## First-person controller: walk, sprint, jump, mouse look, head bob, weapon recoil, explosion
+## shake and knockback, and the interaction ray that finds what the player is looking at.
 
 @export_group("Movement")
 @export var walk_speed := 4.5
@@ -14,24 +15,31 @@ extends CharacterBody3D
 @export var base_fov := 75.0
 @export var sprint_fov_boost := 7.0
 
+@export_group("Interaction")
+@export var reach := 2.6
+
 @export_group("Head bob")
-@export var bob_frequency := 1.9
 @export var bob_amount := 0.035
 
 @onready var head: Node3D = $Head
 @onready var recoil_pivot: Node3D = $Head/RecoilPivot
 @onready var camera: Camera3D = $Head/RecoilPivot/Camera3D
 @onready var weapon: Rifle = $Head/RecoilPivot/Camera3D/WeaponHolder/Rifle
-@onready var footsteps: AudioStreamPlayer = $Footsteps
+@onready var footsteps: Footsteps = $Footsteps
 
 var is_sprinting := false
+## The Interactable under the crosshair within reach, or null. The HUD shows its prompt.
+var focused_interactable: Interactable
 
 var _gravity: float = ProjectSettings.get_setting("physics/3d/default_gravity")
-var _bob_phase := 0.0
-var _last_step := 0
 var _camera_rest := Vector3.ZERO
+var _bob_strength := 0.0
 ## Visual recoil offset (x = pitch, y = yaw) that springs back to zero.
 var _recoil := Vector2.ZERO
+## Camera shake strength (explosions); decays over time.
+var _shake := 0.0
+## Push from explosions, added on top of walking and decaying quickly.
+var _knockback := Vector3.ZERO
 
 
 func _ready() -> void:
@@ -53,13 +61,26 @@ func apply_recoil(pitch_degrees: float, yaw_degrees: float) -> void:
 	_recoil += Vector2(deg_to_rad(pitch_degrees), deg_to_rad(yaw_degrees))
 
 
+## Shakes the camera (0 = none, 1 = a car exploding next to you).
+func apply_shake(strength: float) -> void:
+	_shake = maxf(_shake, strength)
+
+
+## Shoves the player (explosions). The upward part lifts them off the ground.
+func apply_knockback(impulse: Vector3) -> void:
+	_knockback += Vector3(impulse.x, 0.0, impulse.z)
+	velocity.y = maxf(velocity.y, impulse.y)
+
+
 func _physics_process(delta: float) -> void:
 	if not is_on_floor():
 		velocity.y -= _gravity * delta
-	elif Input.is_action_just_pressed("jump"):
+	elif Input.is_action_just_pressed("jump") and GameState.is_free_roaming():
 		velocity.y = jump_velocity
 
 	var input_dir := Input.get_vector("move_left", "move_right", "move_forward", "move_back")
+	if not GameState.is_free_roaming():
+		input_dir = Vector2.ZERO
 	var direction := (transform.basis * Vector3(input_dir.x, 0.0, input_dir.y)).normalized()
 	is_sprinting = Input.is_action_pressed("sprint") and input_dir.y < -0.1 and is_on_floor()
 
@@ -67,30 +88,48 @@ func _physics_process(delta: float) -> void:
 	var accel := ground_acceleration if is_on_floor() else air_acceleration
 	var horizontal := Vector2(velocity.x, velocity.z)
 	horizontal = horizontal.lerp(Vector2(direction.x, direction.z) * target_speed, 1.0 - exp(-accel * delta))
-	velocity.x = horizontal.x
-	velocity.z = horizontal.y
+	velocity.x = horizontal.x + _knockback.x
+	velocity.z = horizontal.y + _knockback.z
+	_knockback = _knockback.lerp(Vector3.ZERO, 1.0 - exp(-4.0 * delta))
 
+	var before := global_position
 	move_and_slide()
+	velocity.x -= _knockback.x
+	velocity.z -= _knockback.z
+	footsteps.update(self, delta, Vector2(global_position.x - before.x, global_position.z - before.z).length())
+	_update_interaction()
 	_update_camera_effects(delta)
 
 
+## Looks for an Interactable in front of the camera; walls and props block the ray.
+func _update_interaction() -> void:
+	focused_interactable = null
+	if not GameState.is_free_roaming():
+		return
+	var origin := camera.global_position
+	var query := PhysicsRayQueryParameters3D.create(origin, origin - camera.global_basis.z * reach, 1 | 8 | 32)
+	query.collide_with_areas = true
+	query.exclude = [get_rid()]
+	var hit := get_world_3d().direct_space_state.intersect_ray(query)
+	var target := hit.get("collider") as Interactable
+	if target and target.enabled:
+		focused_interactable = target
+		if Input.is_action_just_pressed("interact") and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
+			target.interact(self)
+
+
 func _update_camera_effects(delta: float) -> void:
-	var speed := Vector2(velocity.x, velocity.z).length()
-	if is_on_floor() and speed > 0.5:
-		_bob_phase += delta * bob_frequency * TAU * (speed / walk_speed) * 0.5
-	else:
-		_bob_phase = lerpf(_bob_phase, roundf(_bob_phase / PI) * PI, 1.0 - exp(-8.0 * delta))
-	# A footstep each time the bob passes the bottom of its cycle.
-	var step := floori(_bob_phase / PI)
-	if step != _last_step and is_on_floor() and speed > 0.5:
-		footsteps.pitch_scale = randf_range(0.85, 1.15)
-		footsteps.play()
-	_last_step = step
-	var bob_strength := clampf(speed / walk_speed, 0.0, 1.5) * bob_amount
-	camera.position = _camera_rest + Vector3(cos(_bob_phase) * bob_strength * 0.5, absf(sin(_bob_phase)) * bob_strength, 0.0)
+	# The bob follows the footstep phase (one dip per step), so steps and bob line up.
+	var speed := Vector2(velocity.x, velocity.z).length() if is_on_floor() else 0.0
+	_bob_strength = lerpf(_bob_strength, clampf(speed / walk_speed, 0.0, 1.5) * bob_amount, 1.0 - exp(-8.0 * delta))
+	var phase := footsteps.phase
+	camera.position = _camera_rest + Vector3(cos(phase) * _bob_strength * 0.5, absf(sin(phase)) * _bob_strength, 0.0)
 
 	var target_fov := base_fov + (sprint_fov_boost if is_sprinting else 0.0)
 	camera.fov = lerpf(camera.fov, target_fov, 1.0 - exp(-6.0 * delta))
 
 	_recoil = _recoil.lerp(Vector2.ZERO, 1.0 - exp(-9.0 * delta))
-	recoil_pivot.rotation = Vector3(_recoil.x, _recoil.y, 0.0)
+	_shake = move_toward(_shake, 0.0, delta * 1.4)
+	var jitter := Vector3(randf_range(-1, 1), randf_range(-1, 1), randf_range(-1, 1)) * _shake * _shake
+	recoil_pivot.rotation = Vector3(_recoil.x + jitter.x * 0.05, _recoil.y + jitter.y * 0.05, jitter.z * 0.03)
+	camera.position += jitter * 0.08

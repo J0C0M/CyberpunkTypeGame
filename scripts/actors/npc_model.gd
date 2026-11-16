@@ -31,17 +31,28 @@ func _ready() -> void:
 	_build()
 
 
-## phase advances with distance walked; amount (0..1) scales the swing so idling stands still.
+## Simple walk cycle: phase advances with distance walked; amount (0..1) scales the swing.
 func animate(phase: float, amount: float) -> void:
+	pose(phase, amount)
+
+
+## Full pose for this frame. walk (0..1) swings the limbs, run (0..1) exaggerates the swing and
+## leans forward, cower (0..1) kneels with the arms over the head, limp (0..1) splays the limbs.
+func pose(phase: float, walk: float, run := 0.0, cower := 0.0, limp := 0.0) -> void:
 	if _body == null:
 		return
-	var swing := sin(phase) * amount
-	_left_leg.rotation.x = swing * 0.55
-	_right_leg.rotation.x = -swing * 0.55
-	_left_arm.rotation.x = -swing * 0.45
-	if not _holds_umbrella:
-		_right_arm.rotation.x = swing * 0.45
-	_body.position.y = absf(sin(phase)) * 0.035 * amount
+	var swing := sin(phase) * walk
+	var leg_swing := swing * (0.55 + 0.35 * run)
+	var arm_swing := swing * (0.45 + 0.6 * run)
+	_left_leg.rotation = Vector3(leg_swing - cower * 1.1, 0.0, -limp * 0.25)
+	_right_leg.rotation = Vector3(-leg_swing - cower * 1.1, 0.0, limp * 0.25)
+	_left_arm.rotation = Vector3(-arm_swing - cower * 2.5 - run * 0.3, 0.0, -cower * 0.4 - limp * 1.3)
+	if _holds_umbrella and cower == 0.0 and limp == 0.0:
+		_right_arm.rotation = Vector3(1.05, 0.0, 0.25)
+	else:
+		_right_arm.rotation = Vector3(arm_swing - cower * 2.5 - run * 0.3, 0.0, cower * 0.4 + limp * 1.3)
+	_body.position.y = absf(sin(phase)) * 0.035 * walk * (1.0 + run) - cower * 0.42
+	_body.rotation.x = -run * 0.18 - cower * 0.35
 
 
 func _build() -> void:

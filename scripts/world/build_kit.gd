@@ -65,6 +65,16 @@ static func flat_text(parent: Node, text: String, xform: Transform3D, color: Col
 	return label
 
 
+## Breakable glass pane centred on `xform` (see GlassPane).
+static func glass_pane(parent: Node, xform: Transform3D, size: Vector3, tint := Color(0.4, 0.7, 1.0, 0.1)) -> GlassPane:
+	var pane := GlassPane.new()
+	pane.size = size
+	pane.tint = tint
+	pane.transform = xform
+	parent.add_child(pane)
+	return pane
+
+
 static func static_body(parent: Node, node_name := "Collision") -> StaticBody3D:
 	var body := StaticBody3D.new()
 	body.name = node_name
@@ -103,3 +113,66 @@ static func generated_root(parent: Node, node_name: String) -> Node3D:
 	root.set_meta("generated", true)
 	parent.add_child(root)
 	return root
+
+
+## Rising steam puffs (vents, cooking pots). `amount` scales the density, `size` the puffs.
+static func steam(pos: Vector3, amount := 28, size := 1.2) -> GPUParticles3D:
+	var process := ParticleProcessMaterial.new()
+	process.direction = Vector3.UP
+	process.spread = 12.0
+	process.initial_velocity_min = 0.6
+	process.initial_velocity_max = 1.2
+	process.gravity = Vector3(0.15, 0.25, 0.0)
+	process.scale_min = 0.6
+	process.scale_max = 1.2
+	var grow := Curve.new()
+	grow.add_point(Vector2(0, 0.4))
+	grow.add_point(Vector2(1, 2.5))
+	var grow_texture := CurveTexture.new()
+	grow_texture.curve = grow
+	process.scale_curve = grow_texture
+	var fade := Gradient.new()
+	fade.set_color(0, Color(1, 1, 1, 0.0))
+	fade.set_color(1, Color(1, 1, 1, 0.0))
+	fade.add_point(0.2, Color(1, 1, 1, 0.18))
+	var fade_texture := GradientTexture1D.new()
+	fade_texture.gradient = fade
+	process.color_ramp = fade_texture
+	process.emission_shape = ParticleProcessMaterial.EMISSION_SHAPE_SPHERE
+	process.emission_sphere_radius = 0.4
+
+	var puff_material := StandardMaterial3D.new()
+	puff_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	puff_material.vertex_color_use_as_albedo = true
+	puff_material.albedo_color = Color(0.75, 0.75, 0.85)
+	puff_material.billboard_mode = BaseMaterial3D.BILLBOARD_PARTICLES
+	puff_material.albedo_texture = soft_puff_texture()
+	var quad := QuadMesh.new()
+	quad.size = Vector2(size, size)
+	quad.material = puff_material
+
+	var particles := GPUParticles3D.new()
+	particles.name = "Steam"
+	particles.position = pos
+	particles.amount = amount
+	particles.lifetime = 4.0
+	particles.preprocess = 4.0
+	particles.process_material = process
+	particles.draw_pass_1 = quad
+	particles.visibility_aabb = AABB(Vector3(-3, 0, -3), Vector3(6, 8, 6))
+	particles.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	return particles
+
+
+static func soft_puff_texture() -> Texture2D:
+	var gradient := Gradient.new()
+	gradient.set_color(0, Color(1, 1, 1, 1))
+	gradient.set_color(1, Color(1, 1, 1, 0))
+	var texture := GradientTexture2D.new()
+	texture.gradient = gradient
+	texture.fill = GradientTexture2D.FILL_RADIAL
+	texture.fill_from = Vector2(0.5, 0.5)
+	texture.fill_to = Vector2(0.5, 0.0)
+	texture.width = 32
+	texture.height = 32
+	return texture

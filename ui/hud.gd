@@ -3,7 +3,7 @@ extends CanvasLayer
 ## hint that fades out, short messages (call_group("hud", "show_message", text)) and a
 ## "click to play" overlay while the mouse is free.
 
-const HINT_TEXT := "WASD move   SHIFT sprint   SPACE jump   LMB fire   R reload\nESC free mouse   F2 vertex wobble   F3 retro filter"
+const HINT_TEXT := "WASD move   SHIFT sprint   SPACE jump   LMB fire   R reload   E interact\nESC free mouse   F2 vertex wobble   F3 retro filter"
 const HINT_DURATION := 12.0
 
 var _rifle: Rifle
@@ -17,11 +17,18 @@ var _hint: Label
 var _message: Label
 var _message_time := 0.0
 var _overlay: Control
+var _prompt: Label
+var _credits: Label
+var _waypoint: WaypointMarker
+var _fade: ColorRect
+var _player: Player
 var _elapsed := 0.0
 
 
 func _ready() -> void:
 	add_to_group("hud")
+	# Keep updating while menus pause the game, so prompts and the crosshair hide properly.
+	process_mode = Node.PROCESS_MODE_ALWAYS
 	_font = _make_font()
 	var root := Control.new()
 	root.name = "Root"
@@ -31,9 +38,21 @@ func _ready() -> void:
 	_build_crosshair(root)
 	_build_ammo_panel(root)
 	_build_texts(root)
+	_waypoint = WaypointMarker.new()
+	_waypoint.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	root.add_child(_waypoint)
+	_waypoint.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_build_overlay(root)
+	_fade = ColorRect.new()
+	_fade.color = Color(0, 0, 0, 0)
+	_fade.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	root.add_child(_fade)
+	_fade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 
 	var player := get_tree().get_first_node_in_group("player") as Player
+	_player = player
+	if player:
+		_waypoint.camera = player.camera
 	if player and player.weapon:
 		_rifle = player.weapon
 		_rifle.ammo_changed.connect(_on_ammo_changed)
@@ -45,6 +64,10 @@ func _ready() -> void:
 
 func _process(delta: float) -> void:
 	_elapsed += delta
+	var screen := get_parent().get_node_or_null("RetroScreen") as SubViewportContainer
+	if screen:
+		var viewport := screen.get_child(0) as SubViewport
+		_waypoint.viewport_scale = screen.size / Vector2(viewport.size)
 	if _rifle:
 		_crosshair.spread = _rifle.get_spread()
 		if _rifle.is_reloading:
@@ -55,8 +78,19 @@ func _process(delta: float) -> void:
 		_message_time -= delta
 		_message.modulate.a = clampf(_message_time / 0.6, 0.0, 1.0)
 	var free_mouse := Input.mouse_mode != Input.MOUSE_MODE_CAPTURED and not get_tree().has_meta("screenshot_mode")
-	_overlay.visible = free_mouse
-	_crosshair.visible = not free_mouse
+	_overlay.visible = free_mouse and GameState.is_free_roaming()
+	_crosshair.visible = not free_mouse and GameState.is_free_roaming()
+	var focus := _player.focused_interactable if _player else null
+	_prompt.visible = focus != null and _crosshair.visible
+	if _prompt.visible:
+		_prompt.text = "[E] " + focus.get_prompt()
+
+
+## Fades the whole screen to black (alpha 1) or back (alpha 0). Await the returned tween.
+func fade_to(alpha: float, seconds: float) -> Tween:
+	var tween := create_tween()
+	tween.tween_property(_fade, "color:a", alpha, seconds)
+	return tween
 
 
 func show_message(text: String, duration := 2.0) -> void:
@@ -147,6 +181,26 @@ func _build_texts(root: Control) -> void:
 	location.offset_right = -28
 	location.offset_top = 22
 	location.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+
+	_credits = _label("¢ 0", 22, Palette.AMBER, Palette.AMBER.darkened(0.7))
+	root.add_child(_credits)
+	_credits.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
+	_credits.offset_left = -300
+	_credits.offset_right = -28
+	_credits.offset_top = 44
+	_credits.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	GameState.credits_changed.connect(func(amount: int) -> void: _credits.text = "¢ %d" % amount)
+	_credits.text = "¢ %d" % GameState.credits
+
+	_prompt = _label("", 20, Color.WHITE, Palette.CYAN.darkened(0.4))
+	root.add_child(_prompt)
+	_prompt.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
+	_prompt.offset_left = -300
+	_prompt.offset_right = 300
+	_prompt.offset_top = 34
+	_prompt.offset_bottom = 64
+	_prompt.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_prompt.visible = false
 
 	_message = _label("", 24, Palette.LIME, Palette.LIME.darkened(0.7))
 	root.add_child(_message)

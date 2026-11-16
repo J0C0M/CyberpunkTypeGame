@@ -10,10 +10,10 @@ signal reload_finished
 
 @export var rounds_per_minute := 600.0
 @export var magazine_size := 30
-@export var reserve_ammo := 210
-@export var max_reserve_ammo := 300
 @export var reload_time := 2.0
 @export var max_range := 400.0
+## Damage per bullet before hit-zone multipliers (headshots, engine blocks...).
+@export var damage := 34.0
 ## Spread in degrees: the base value plus bloom that builds up while holding the trigger.
 @export var base_spread := 0.3
 @export var spread_per_shot := 0.22
@@ -21,8 +21,10 @@ signal reload_finished
 @export var recoil_pitch := 1.1
 @export var recoil_yaw := 0.5
 
-## World, NPCs and props (physics layers 1, 3 and 4).
-const HIT_MASK := 1 | 4 | 8
+## World, NPCs, props and hit zones (physics layers 1, 3, 4 and 5).
+const HIT_MASK := 1 | 4 | 8 | 16
+## How far the bang of a shot alarms people, in metres.
+const SHOT_ALARM_RADIUS := 35.0
 
 @onready var model: RifleModel = $Model
 @onready var muzzle: Marker3D = $Muzzle
@@ -31,8 +33,21 @@ const HIT_MASK := 1 | 4 | 8
 @onready var reload_sound: AudioStreamPlayer = $ReloadSound
 @onready var dry_fire_sound: AudioStreamPlayer = $DryFireSound
 
+## Inventory item that feeds this gun.
+const AMMO_ID := &"ammo_ks47"
+
 var ammo_in_magazine := 0
 var is_reloading := false
+## Spare rounds live in the player's inventory, so they can be bought, sold and picked up.
+var reserve_ammo: int:
+	get:
+		return GameState.inventory.count(AMMO_ID)
+	set(value):
+		var current := GameState.inventory.count(AMMO_ID)
+		if value > current:
+			GameState.inventory.add(AMMO_ID, value - current)
+		elif value < current:
+			GameState.inventory.remove(AMMO_ID, current - value)
 
 var _player: Player
 var _rest := Transform3D.IDENTITY
@@ -63,6 +78,7 @@ func _ready() -> void:
 	_build_flash()
 	_build_tracer()
 	flash_light.visible = false
+	GameState.inventory.changed.connect(func() -> void: ammo_changed.emit(ammo_in_magazine, reserve_ammo))
 	# Deferred so listeners that connect in their own _ready still get the starting values.
 	ammo_changed.emit.call_deferred(ammo_in_magazine, reserve_ammo)
 
@@ -112,12 +128,6 @@ func get_reload_progress() -> float:
 	return clampf(_reload_elapsed / reload_time, 0.0, 1.0) if is_reloading else 0.0
 
 
-## Tops the reserve up to the maximum (used by ammo crates).
-func refill() -> void:
-	reserve_ammo = max_reserve_ammo
-	ammo_changed.emit(ammo_in_magazine, reserve_ammo)
-
-
 func _finish_reload() -> void:
 	var taken := mini(magazine_size - ammo_in_magazine, reserve_ammo)
 	ammo_in_magazine += taken
@@ -135,15 +145,20 @@ func _fire() -> void:
 	var direction := _spread_direction(camera.global_basis, deg_to_rad(base_spread + _bloom))
 	var end := origin + direction * max_range
 	var query := PhysicsRayQueryParameters3D.create(origin, end, HIT_MASK)
+	query.collide_with_areas = true
 	if _player:
 		query.exclude = [_player.get_rid()]
 	var hit := get_world_3d().direct_space_state.intersect_ray(query)
 	if not hit.is_empty():
 		end = hit["position"]
+		var collider: Object = hit["collider"]
+		var target := Damageable.deliver(collider, HitInfo.create(damage, end, hit["normal"], direction, _player, HitInfo.Kind.BULLET, 3.0))
 		var effects := get_tree().get_first_node_in_group("impact_effects") as ImpactEffects
-		if effects:
-			# Bullet holes only on the static world; moving NPCs just throw sparks.
-			effects.spawn_impact(end, hit["normal"], hit["collider"] is StaticBody3D)
+		if effects and target == null:
+			# Bullet holes only on the static world; anything with health shows its own reaction.
+			effects.spawn_impact(end, hit["normal"], collider is StaticBody3D)
+		EventBus.emit_danger(end, 9.0, EventBus.SEVERITY_IMPACT, _player)
+	EventBus.emit_danger(origin, SHOT_ALARM_RADIUS, EventBus.SEVERITY_SHOT, _player)
 
 	_show_tracer(muzzle.global_position, end)
 	_flash_time = 0.045
